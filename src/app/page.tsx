@@ -780,8 +780,8 @@ export default function Workspace() {
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary text-white font-bold flex items-center justify-center shadow-md shadow-primary/10">
-                              {student.nickname || student.fullName.slice(3, 5)}
+                            <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 font-bold flex items-center justify-center shadow-sm select-none">
+                              {student.nickname || student.fullName.trim().charAt(0)}
                             </div>
                             <div>
                               <h4 className="font-bold text-sm group-hover:text-primary transition-colors text-foreground">{student.fullName}</h4>
@@ -1025,46 +1025,74 @@ export default function Workspace() {
 
                   {/* Attendance table Grid */}
                   <div className="space-y-2">
-                    {students.map((student) => (
-                      <div key={student.id} className="flex justify-between items-center p-3 rounded-xl border border-border bg-card hover:border-primary/20 transition-all">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-bold text-muted-foreground w-6">{student.seatNumber}</span>
-                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
-                            {student.nickname || student.fullName.slice(3, 5)}
+                    {students.map((student) => {
+                      const safeAvatar = student.nickname || student.fullName.trim().charAt(0);
+                      const isOther = ["leave", "sick"].includes(student.attendanceToday || "");
+                      const otherVal = isOther ? student.attendanceToday : "";
+                      return (
+                        <div key={student.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card hover:border-indigo-200 dark:hover:border-indigo-950 transition-all gap-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-mono font-bold text-slate-400 dark:text-muted-foreground w-6 text-center">{student.seatNumber}</span>
+                            <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-semibold flex items-center justify-center text-xs shrink-0 select-none">
+                              {safeAvatar}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-xs text-slate-850 dark:text-white leading-tight">{student.fullName}</h4>
+                              <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5">เลขประจำตัว {student.studentCode}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-xs text-foreground">{student.fullName}</h4>
-                            <p className="text-[10px] text-muted-foreground">เลขประจำตัว {student.studentCode}</p>
-                          </div>
-                        </div>
 
-                        {/* Status buttons */}
-                        <div className="flex items-center gap-1.5">
-                          {[
-                            { code: "present", name: "มาเรียน", bg: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/25" },
-                            { code: "late", name: "สาย", bg: "bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/25" },
-                            { code: "absent", name: "ขาด", bg: "bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/25" },
-                            { code: "leave", name: "ลา", bg: "bg-sky-500/10 text-sky-500 border-sky-500/20 hover:bg-sky-500/25" },
-                            { code: "sick", name: "ป่วย", bg: "bg-teal-500/10 text-teal-500 border-teal-500/20 hover:bg-teal-500/25" }
-                          ].map((btn) => {
-                            const isSelected = student.attendanceToday === btn.code;
-                            return (
-                              <button
-                                key={btn.code}
-                                onClick={() => handleAttendanceChange(student.id, btn.code as Student["attendanceToday"])}
-                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
-                                  isSelected 
-                                    ? "bg-primary text-primary-foreground border-primary scale-[1.05]" 
-                                    : btn.bg
+                          {/* Compact Status Selector Buttons */}
+                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                            <div className="inline-flex rounded-lg p-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80">
+                              {[
+                                { code: "present", name: "มา", activeClass: "bg-emerald-500 text-white shadow-sm dark:bg-emerald-600", inactiveClass: "text-emerald-600 hover:bg-emerald-50/50 dark:text-emerald-500 dark:hover:bg-emerald-950/20" },
+                                { code: "late", name: "สาย", activeClass: "bg-amber-500 text-white shadow-sm dark:bg-amber-600", inactiveClass: "text-amber-600 hover:bg-amber-50/50 dark:text-amber-500 dark:hover:bg-amber-950/20" },
+                                { code: "absent", name: "ขาด", activeClass: "bg-rose-500 text-white shadow-sm dark:bg-rose-600", inactiveClass: "text-rose-600 hover:bg-rose-50/50 dark:text-rose-500 dark:hover:bg-rose-950/20" }
+                              ].map((btn) => {
+                                const isSelected = student.attendanceToday === btn.code;
+                                return (
+                                  <button
+                                    key={btn.code}
+                                    type="button"
+                                    onClick={() => handleAttendanceChange(student.id, btn.code as Student["attendanceToday"])}
+                                    className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                                      isSelected ? btn.activeClass : `${btn.inactiveClass} bg-transparent`
+                                    }`}
+                                  >
+                                    {btn.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Clean dropdown selector for others like leave or sick */}
+                            <div className="relative">
+                              <select
+                                value={otherVal}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val) {
+                                    handleAttendanceChange(student.id, val as Student["attendanceToday"]);
+                                  } else {
+                                    handleAttendanceChange(student.id, "present");
+                                  }
+                                }}
+                                className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-slate-50 dark:bg-slate-900 cursor-pointer outline-none transition-all ${
+                                  isOther 
+                                    ? "border-sky-300 bg-sky-50 dark:border-sky-900/50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400" 
+                                    : "border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400"
                                 }`}
                               >
-                                {btn.name}
-                              </button>
-                            );
-                          })}
+                                <option value="" className="text-slate-500">อื่น ๆ...</option>
+                                <option value="leave" className="text-sky-600 dark:text-sky-400">ลา</option>
+                                <option value="sick" className="text-teal-600 dark:text-teal-400">ป่วย</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

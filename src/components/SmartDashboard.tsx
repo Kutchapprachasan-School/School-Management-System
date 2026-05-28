@@ -4,7 +4,7 @@ import React from "react";
 import { 
   Calendar, Clock, CheckCircle2, ShieldAlert, Award, FileText, 
   Users, TrendingUp, AlertTriangle, CheckSquare, Sparkles, BookOpen, 
-  ChevronRight, HeartPulse, Bell, Activity, BellRing, Database, GraduationCap
+  ChevronRight, HeartPulse, Activity, BellRing, Database, GraduationCap
 } from "lucide-react";
 import { Student, LeaveRequest, UserRole } from "@/types/school-os";
 
@@ -39,41 +39,49 @@ export default function SmartDashboard({
   const renderTeacherDashboard = () => (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Overview stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md">
-          <div className="flex justify-between items-start">
-            <span className="text-xs text-slate-500 dark:text-muted-foreground font-semibold">คาบสอนวันนี้</span>
-            <span className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><BookOpen className="w-4 h-4" /></span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] sm:min-h-[130px]">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight truncate">คาบสอนวันนี้</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0"><BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
           </div>
-          <p className="text-3xl font-light tracking-tight text-slate-900 dark:text-white mt-3">4 คาบ</p>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground block mt-1">ชั้น ม.6/1 (วิชาภาษาไทย)</span>
+          <div className="mt-2">
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-slate-900 dark:text-white leading-none">4 คาบ</p>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-1.5 truncate">ม.6/1 (วิชาภาษาไทย)</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md">
-          <div className="flex justify-between items-start">
-            <span className="text-xs text-slate-500 dark:text-muted-foreground font-semibold">นักเรียนขาดเรียน</span>
-            <span className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 flex items-center justify-center"><ShieldAlert className="w-4 h-4" /></span>
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] sm:min-h-[130px]">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight truncate">นักเรียนขาดเรียน</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0"><ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
           </div>
-          <p className="text-3xl font-light tracking-tight text-rose-600 mt-3">{absentToday} คน</p>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground block mt-1">จากทั้งหมด {totalStudentsCount} คน</span>
+          <div className="mt-2">
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-rose-600 leading-none">{absentToday} คน</p>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-1.5 truncate">จากทั้งหมด {totalStudentsCount} คน</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md">
-          <div className="flex justify-between items-start">
-            <span className="text-xs text-slate-500 dark:text-muted-foreground font-semibold">นักเรียนมาสาย</span>
-            <span className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center"><Clock className="w-4 h-4" /></span>
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] sm:min-h-[130px]">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight truncate">นักเรียนมาสาย</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0"><Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
           </div>
-          <p className="text-3xl font-light tracking-tight text-amber-600 mt-3">{lateToday} คน</p>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground block mt-1">ควรติดตามระเบียบแถว</span>
+          <div className="mt-2">
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-amber-600 leading-none">{lateToday} คน</p>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-1.5 truncate">ติดตามระเบียบแถว</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md">
-          <div className="flex justify-between items-start">
-            <span className="text-xs text-slate-500 dark:text-muted-foreground font-semibold">เคสห้องพยาบาล</span>
-            <span className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><HeartPulse className="w-4 h-4" /></span>
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] sm:min-h-[130px]">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight truncate">เคสห้องพยาบาล</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0"><HeartPulse className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
           </div>
-          <p className="text-3xl font-light tracking-tight text-emerald-600 mt-3">2 เคส</p>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground block mt-1">มีการจ่ายยาพาราเซตามอล</span>
+          <div className="mt-2">
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-emerald-600 leading-none">2 เคส</p>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-1.5 truncate">จ่ายยาพาราเซตามอล</span>
+          </div>
         </div>
       </div>
 
@@ -115,7 +123,7 @@ export default function SmartDashboard({
                 </div>
                 {slot.status === "done" ? (
                   <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> บันทึกหลังสอนแล้ว
+                    <CheckCircle2 className="w-3.5 h-3.5" /> บันทึกหลังสอน
                   </span>
                 ) : slot.status === "next" ? (
                   <button 
@@ -180,17 +188,17 @@ export default function SmartDashboard({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Total Attendance Chart mock */}
-        <div className="p-6 rounded-xl glass-card flex items-center justify-between hover:shadow-md transition-all">
+        <div className="p-5 sm:p-6 rounded-xl glass-card flex items-center justify-between hover:shadow-md transition-all">
           <div>
-            <h3 className="text-xs font-semibold text-slate-400 dark:text-muted-foreground uppercase tracking-wider">อัตราเข้าเรียนวันนี้</h3>
-            <p className="text-3xl font-light tracking-tight text-slate-900 dark:text-white mt-3">96.8%</p>
+            <h3 className="text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-muted-foreground uppercase tracking-wider">อัตราเข้าเรียนวันนี้</h3>
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-slate-900 dark:text-white mt-2 sm:mt-3">96.8%</p>
             <span className="text-[10px] text-slate-500 dark:text-muted-foreground flex items-center gap-1 mt-2">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
               ดีกว่าเมื่อวาน +0.5%
             </span>
           </div>
           {/* Animated circular gauge SVG */}
-          <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shrink-0">
             <svg className="w-full h-full transform -rotate-90">
               <circle cx="32" cy="32" r="28" className="stroke-slate-100 dark:stroke-slate-800" strokeWidth="5" fill="transparent" />
               <circle cx="32" cy="32" r="28" className="stroke-indigo-600 dark:stroke-indigo-400" strokeWidth="5" fill="transparent" strokeDasharray="175" strokeDashoffset="5" strokeLinecap="round" />
@@ -200,35 +208,35 @@ export default function SmartDashboard({
         </div>
 
         {/* Student at Risk Indicator */}
-        <div className="p-6 rounded-xl glass-card flex items-center justify-between hover:shadow-md transition-all">
+        <div className="p-5 sm:p-6 rounded-xl glass-card flex items-center justify-between hover:shadow-md transition-all">
           <div>
-            <h3 className="text-xs font-semibold text-slate-400 dark:text-muted-foreground uppercase tracking-wider">นักเรียนเสี่ยงวิกฤต</h3>
-            <p className="text-3xl font-light tracking-tight text-rose-600 mt-3">{riskStudents.length} คน</p>
+            <h3 className="text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-muted-foreground uppercase tracking-wider">นักเรียนเสี่ยงวิกฤต</h3>
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-rose-600 mt-2 sm:mt-3">{riskStudents.length} คน</p>
             <span className="text-[10px] text-slate-500 dark:text-muted-foreground flex items-center gap-1 mt-2">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-              ต้องการแผนช่วยเหลือด่วน
+              ต้องการแผนช่วยเหลือ
             </span>
           </div>
           <button 
             onClick={() => onNavigate("Analytics", "risk")}
-            className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+            className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 flex items-center justify-center hover:scale-105 transition-transform cursor-pointer shrink-0"
           >
             <AlertTriangle className="w-5 h-5" />
           </button>
         </div>
 
         {/* School KPI */}
-        <div className="p-6 rounded-xl glass-card flex items-center justify-between hover:shadow-md transition-all">
+        <div className="p-5 sm:p-6 rounded-xl glass-card flex items-center justify-between hover:shadow-md transition-all">
           <div>
-            <h3 className="text-xs font-semibold text-slate-400 dark:text-muted-foreground uppercase tracking-wider">เอกสารค้างพิจารณา</h3>
-            <p className="text-3xl font-light tracking-tight text-amber-600 mt-3">{pendingLeaves.length} เรื่อง</p>
+            <h3 className="text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-muted-foreground uppercase tracking-wider">เอกสารค้างพิจารณา</h3>
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-amber-600 mt-2 sm:mt-3">{pendingLeaves.length} เรื่อง</p>
             <span className="text-[10px] text-slate-500 dark:text-muted-foreground flex items-center gap-1 mt-2">
-              ใบลาครู / ขอใช้ห้อง / ขอใช้รถ
+              ใบลาครู / ใช้ห้อง / ใช้รถ
             </span>
           </div>
           <button 
             onClick={() => onNavigate("Operations", "requests")}
-            className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+            className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center hover:scale-105 transition-transform cursor-pointer shrink-0"
           >
             <FileText className="w-5 h-5" />
           </button>
@@ -320,33 +328,41 @@ export default function SmartDashboard({
   const renderStudentDashboard = () => (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="p-5 rounded-xl glass-card flex flex-col items-center text-center">
-          <span className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center"><Award className="w-5 h-5" /></span>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground uppercase font-semibold mt-3">คะแนนวินัยสะสม</span>
-          <span className="text-3xl font-light tracking-tight text-slate-900 dark:text-white mt-1">95</span>
-          <span className="text-[9px] text-emerald-600 font-semibold mt-1">พฤติกรรมดีเยี่ยม</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card flex flex-col items-center text-center justify-between min-h-[120px] sm:min-h-[145px]">
+          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0"><Award className="w-4.5 h-4.5 sm:w-5 h-5" /></span>
+          <div className="w-full mt-2">
+            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-muted-foreground uppercase font-semibold leading-tight block truncate">คะแนนวินัยสะสม</span>
+            <span className="text-2xl sm:text-3xl font-light tracking-tight text-slate-900 dark:text-white block mt-0.5 sm:mt-1">95</span>
+            <span className="text-[9px] sm:text-[10px] text-emerald-600 font-semibold block mt-0.5 sm:mt-1 truncate">พฤติกรรมดีเยี่ยม</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-xl glass-card flex flex-col items-center text-center">
-          <span className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><CheckCircle2 className="w-5 h-5" /></span>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground uppercase font-semibold mt-3">อัตราการมาเรียน</span>
-          <span className="text-3xl font-light tracking-tight text-slate-900 dark:text-white mt-1">98%</span>
-          <span className="text-[9px] text-slate-450 dark:text-muted-foreground mt-1">ขาด 1 ครั้ง • สาย 1 ครั้ง</span>
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card flex flex-col items-center text-center justify-between min-h-[120px] sm:min-h-[145px]">
+          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0"><CheckCircle2 className="w-4.5 h-4.5 sm:w-5 h-5" /></span>
+          <div className="w-full mt-2">
+            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-muted-foreground uppercase font-semibold leading-tight block truncate">อัตราการมาเรียน</span>
+            <span className="text-2xl sm:text-3xl font-light tracking-tight text-slate-900 dark:text-white block mt-0.5 sm:mt-1">98%</span>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-0.5 sm:mt-1 truncate">ขาด 1 • สาย 1 ครั้ง</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-xl glass-card flex flex-col items-center text-center">
-          <span className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><GraduationCap className="w-5 h-5" /></span>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground uppercase font-semibold mt-3">เกรดเฉลี่ย GPA</span>
-          <span className="text-3xl font-light tracking-tight text-slate-900 dark:text-white mt-1">3.85</span>
-          <span className="text-[9px] text-slate-450 dark:text-muted-foreground mt-1">ภาคเรียนที่ 1/2569</span>
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card flex flex-col items-center text-center justify-between min-h-[120px] sm:min-h-[145px]">
+          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0"><GraduationCap className="w-4.5 h-4.5 sm:w-5 h-5" /></span>
+          <div className="w-full mt-2">
+            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-muted-foreground uppercase font-semibold leading-tight block truncate">เกรดเฉลี่ย GPA</span>
+            <span className="text-2xl sm:text-3xl font-light tracking-tight text-slate-900 dark:text-white block mt-0.5 sm:mt-1">3.85</span>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-0.5 sm:mt-1 truncate">ภาคเรียนที่ 1/2569</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-xl glass-card flex flex-col items-center text-center">
-          <span className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 flex items-center justify-center"><BookOpen className="w-5 h-5" /></span>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground uppercase font-semibold mt-3">การบ้านค้างส่ง</span>
-          <span className="text-3xl font-light tracking-tight text-rose-600 mt-1">1 งาน</span>
-          <span className="text-[9px] text-rose-500 font-semibold mt-1">กำหนดส่งพรุ่งนี้</span>
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card flex flex-col items-center text-center justify-between min-h-[120px] sm:min-h-[145px]">
+          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0"><BookOpen className="w-4.5 h-4.5 sm:w-5 h-5" /></span>
+          <div className="w-full mt-2">
+            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-muted-foreground uppercase font-semibold leading-tight block truncate">การบ้านค้างส่ง</span>
+            <span className="text-2xl sm:text-3xl font-light tracking-tight text-rose-600 block mt-0.5 sm:mt-1">1 งาน</span>
+            <span className="text-[9px] sm:text-[10px] text-rose-500 font-semibold block mt-0.5 sm:mt-1 truncate">ส่งในวันพรุ่งนี้</span>
+          </div>
         </div>
       </div>
 
@@ -409,41 +425,49 @@ export default function SmartDashboard({
   const renderAdminDashboard = () => (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Admin stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="p-5 rounded-xl glass-card hover:shadow-md transition-all">
-          <div className="flex justify-between items-start">
-            <span className="text-xs text-slate-500 dark:text-muted-foreground font-semibold">ผู้ใช้งานทั้งหมด</span>
-            <span className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><Users className="w-4 h-4" /></span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] sm:min-h-[130px]">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight truncate">ผู้ใช้งานทั้งหมด</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0"><Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
           </div>
-          <p className="text-3xl font-light tracking-tight text-slate-900 dark:text-white mt-3">1,240 คน</p>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground block mt-1">ใช้งานจริง (Active) 99%</span>
+          <div className="mt-2">
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-slate-900 dark:text-white leading-none">1,240 คน</p>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-1.5 truncate">ใช้งานจริง (Active) 99%</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-xl glass-card hover:shadow-md transition-all">
-          <div className="flex justify-between items-start">
-            <span className="text-xs text-slate-500 dark:text-muted-foreground font-semibold">สถานะระบบหลัก</span>
-            <span className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><Database className="w-4 h-4" /></span>
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] sm:min-h-[130px]">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight truncate">สถานะระบบหลัก</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0"><Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
           </div>
-          <p className="text-3xl font-light tracking-tight text-emerald-600 mt-3">เสถียร</p>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground block mt-1">Uptime 99.98% (Supabase)</span>
+          <div className="mt-2">
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-emerald-600 leading-none">เสถียร</p>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-1.5 truncate">Uptime 99.98% (Supabase)</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-xl glass-card hover:shadow-md transition-all">
-          <div className="flex justify-between items-start">
-            <span className="text-xs text-slate-500 dark:text-muted-foreground font-semibold">ตารางฐานข้อมูล</span>
-            <span className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><FileText className="w-4 h-4" /></span>
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] sm:min-h-[130px]">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight truncate">ตารางฐานข้อมูล</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0"><FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
           </div>
-          <p className="text-3xl font-light tracking-tight text-indigo-600 dark:text-indigo-400 mt-3">42 ตาราง</p>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground block mt-1">ซิงค์โมเดลผ่าน Prisma CLI</span>
+          <div className="mt-2">
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-indigo-600 dark:text-indigo-400 leading-none">42 ตาราง</p>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-1.5 truncate">ซิงค์ผ่าน Prisma CLI</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-xl glass-card hover:shadow-md transition-all">
-          <div className="flex justify-between items-start">
-            <span className="text-xs text-slate-500 dark:text-muted-foreground font-semibold">กติกาอัตโนมัติ</span>
-            <span className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center"><BellRing className="w-4 h-4" /></span>
+        <div className="p-3.5 sm:p-5 rounded-xl glass-card transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] sm:min-h-[130px]">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight truncate">กติกาอัตโนมัติ</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0"><BellRing className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
           </div>
-          <p className="text-3xl font-light tracking-tight text-amber-600 mt-3">5 กฎ</p>
-          <span className="text-[10px] text-slate-400 dark:text-muted-foreground block mt-1">ผ่าน Rule Engine API Node</span>
+          <div className="mt-2">
+            <p className="text-2xl sm:text-3xl font-light tracking-tight text-amber-600 leading-none">5 กฎ</p>
+            <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-muted-foreground block mt-1.5 truncate">ผ่าน Rule Engine API</span>
+          </div>
         </div>
       </div>
 

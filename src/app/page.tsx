@@ -5,7 +5,7 @@ import {
   Home, Users, BookOpen, Settings, MessageSquare, BarChart3, ShieldAlert,
   Search, Moon, Sun, Bell, AlertTriangle, Plus, CheckCircle2, X, Trash2, 
   Send, Hammer, HelpCircle, FileText, Calendar, Clock, Star, Edit3, ArrowRight,
-  UserCheck, Sparkles, LogOut, CheckSquare, Award, Play, ChevronRight, FileCode
+  UserCheck, Sparkles, LogOut, CheckSquare, Award, Play, ChevronRight, FileCode, GraduationCap
 } from "lucide-react";
 
 import { Student, Teacher, LeaveRequest, HealthVisit, TimelineEvent, NotificationItem, AuditLogItem, UserRole } from "@/types/school-os";
@@ -486,30 +486,18 @@ export default function Workspace() {
   // Calculate stats for Analytics view
   const unreadNotifCount = notifications.filter(n => !n.isRead).length;
 
-  const sidebarItems = [
-    { name: "Home", icon: Home, color: "text-primary", desc: "หน้าแรก" },
-    { name: "People", icon: Users, color: "text-primary", desc: "ฐานข้อมูลคน" },
-    { name: "Academic", icon: BookOpen, color: "text-primary", desc: "วิชาการ" },
-    { name: "Operations", icon: Settings, color: "text-primary", desc: "ดำเนินงาน" },
-    { name: "Engagement", icon: MessageSquare, color: "text-primary", desc: "สื่อสาร" },
-    { name: "Analytics", icon: BarChart3, color: "text-primary", desc: "วิเคราะห์ & AI" },
-    { name: "Admin", icon: ShieldAlert, color: "text-primary", desc: "ตั้งค่าระบบ" },
+  const sidebarMainItems = [
+    { name: "Home", icon: Home, label: lang === "th" ? "แดชบอร์ด" : "Dashboard" },
+    { name: "People", icon: Users, label: lang === "th" ? "ฐานข้อมูลคน" : "People" },
+    { name: "Academic", icon: BookOpen, label: lang === "th" ? "วิชาการ" : "Academics" },
+    { name: "Operations", icon: Settings, label: lang === "th" ? "ดำเนินงาน" : "Operations" },
+    { name: "Engagement", icon: MessageSquare, label: lang === "th" ? "สื่อสาร" : "Engagement" },
+  ];
+  const sidebarAdminItems = [
+    { name: "Analytics", icon: BarChart3, label: lang === "th" ? "วิเคราะห์ & AI" : "AI Analytics" },
+    { name: "Admin", icon: ShieldAlert, label: lang === "th" ? "ตั้งค่าระบบ" : "Settings" },
   ];
   const isApprover = role === "admin" || role === "director";
-
-  const getSidebarDesc = (name: string, defaultDesc: string) => {
-    if (lang === "th") return defaultDesc;
-    switch (name) {
-      case "Home": return "Home";
-      case "People": return "People DB";
-      case "Academic": return "Academics";
-      case "Operations": return "Operations";
-      case "Engagement": return "Communication";
-      case "Analytics": return "AI Analytics";
-      case "Admin": return "System Admin";
-      default: return defaultDesc;
-    }
-  };
 
 
 
@@ -517,21 +505,22 @@ export default function Workspace() {
     <div className={`flex-1 flex overflow-hidden min-h-screen bg-background relative text-foreground ${lang === 'th' ? 'font-th' : 'font-en'}`}>
       
       {/* 🚀 SIDEBAR PRINCIPAL */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border/80 bg-sidebar/70 backdrop-blur-md">
+      <aside className="hidden md:flex flex-col w-56 border-r border-border/60 bg-white dark:bg-sidebar">
         {/* Brand Logo */}
-        <div className="h-16 flex items-center gap-3 px-5 border-b border-border/80 bg-sidebar/50">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/30">
-            <Sparkles className="w-4 h-4 text-white" />
+        <div className="h-16 flex items-center gap-3 px-5 border-b border-border/40">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-md">
+            <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-base leading-none bg-gradient-to-r from-primary to-secondary dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">School OS</h1>
-            <p className="text-[10px] text-muted-foreground font-semibold uppercase mt-0.5 tracking-wider">Operating System</p>
+            <h1 className="font-semibold text-sm leading-none text-foreground">โรงเรียนคุชปะชาสรรค์</h1>
+            <p className="text-[10px] text-muted-foreground mt-0.5">School OS</p>
           </div>
         </div>
 
         {/* Navigation links */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {sidebarItems.map((item) => {
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider px-3 mb-2">{lang === "th" ? "เมนูหลัก" : "Main Menu"}</p>
+          {sidebarMainItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeMenu === item.name;
             return (
@@ -539,75 +528,73 @@ export default function Workspace() {
                 key={item.name}
                 onClick={() => {
                   setActiveMenu(item.name);
-                  // Auto pick sub-tabs based on menu to ensure robust view routing
                   if (item.name === "Home") setActiveSubTab("dashboard");
                   else if (item.name === "People") setActiveSubTab("students");
                   else if (item.name === "Academic") setActiveSubTab("attendance");
                   else if (item.name === "Operations") setActiveSubTab("requests");
                   else if (item.name === "Engagement") setActiveSubTab("line");
-                  else if (item.name === "Analytics") setActiveSubTab("risk");
-                  else if (item.name === "Admin") setActiveSubTab("rules");
                   addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
                 }}
-                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-bold text-sm transition-all duration-200 group ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium transition-all duration-150 relative rounded-lg ${
                   isActive 
-                    ? "bg-primary/5 text-primary font-bold scale-[1.02]" 
-                    : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+                    ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold border-l-[3px] border-indigo-500 pl-[9px]" 
+                    : "text-slate-600 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-muted/50 hover:text-foreground"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 group-hover:scale-110 transition-transform ${isActive ? "text-primary-foreground" : "text-primary"}`} />
-                  <span>{item.name}</span>
-                </div>
-                <span className="text-[10px] opacity-60 font-medium group-hover:translate-x-0.5 transition-transform">{getSidebarDesc(item.name, item.desc)}</span>
+                <Icon className={`w-[18px] h-[18px] ${isActive ? "text-indigo-500" : "text-slate-400 dark:text-muted-foreground"}`} />
+                <span>{item.label}</span>
               </button>
             );
           })}
 
-          <div className="pt-2 pb-1 px-3.5">
-            <div className="h-px bg-border/80 w-full" />
+          <div className="pt-3 pb-2 px-3">
+            <div className="h-px bg-border/50 w-full" />
           </div>
+
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider px-3 mb-2">{lang === "th" ? "บัญชีผู้ใช้" : "Account"}</p>
+          {sidebarAdminItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeMenu === item.name;
+            return (
+              <button
+                key={item.name}
+                onClick={() => {
+                  setActiveMenu(item.name);
+                  if (item.name === "Analytics") setActiveSubTab("risk");
+                  else if (item.name === "Admin") setActiveSubTab("rules");
+                  addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium transition-all duration-150 relative rounded-lg ${
+                  isActive 
+                    ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold border-l-[3px] border-indigo-500 pl-[9px]" 
+                    : "text-slate-600 dark:text-muted-foreground hover:bg-slate-50 dark:hover:bg-muted/50 hover:text-foreground"
+                }`}
+              >
+                <Icon className={`w-[18px] h-[18px] ${isActive ? "text-indigo-500" : "text-slate-400 dark:text-muted-foreground"}`} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
 
           <a
             href="/eleave"
-            className="w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-bold text-sm text-purple-600 dark:text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 transition-all duration-200 group scale-[1.02] shadow-sm shadow-purple-500/5"
+            className="mt-2 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-all"
           >
-            <div className="flex items-center gap-3">
-              <FileText className="w-4 h-4 text-purple-500 group-hover:scale-110 transition-transform animate-pulse" />
-              <span>e-Leave Portal</span>
-            </div>
-            <span className="text-[10px] opacity-80 font-medium">ระบบการลา</span>
+            <FileText className="w-[18px] h-[18px] text-purple-400" />
+            <span>{lang === "th" ? "โปรไฟล์ของฉัน" : "My Profile"}</span>
           </a>
         </nav>
 
-        {/* Running Audit Logs Widget inside Sidebar bottom (Saves space, highly advanced) */}
-        <div className="p-3 border-t border-border/80 bg-muted/30">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
-              <FileCode className="w-3.5 h-3.5 text-primary" />
-              Audit Log Engine
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          </div>
-          <div className="h-24 overflow-y-auto space-y-1.5 text-[9px] font-mono scrollbar-none text-muted-foreground">
-            {auditLogs.slice(0, 4).map((log) => (
-              <div key={log.id} className="leading-normal border-b border-border/20 pb-1">
-                <span className="text-primary dark:text-indigo-400">[{log.action}]</span> {log.details}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* User Account / Role switcher details */}
-        <div className="p-4 border-t border-border/80 bg-sidebar/50 flex items-center justify-between gap-2">
+        {/* User Account */}
+        <div className="p-4 border-t border-border/40 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-secondary text-white font-bold flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-semibold text-sm flex items-center justify-center shrink-0">
               {activeSession.user.name ? activeSession.user.name.charAt(0).toUpperCase() : "U"}
             </div>
             <div className="overflow-hidden">
-              <h4 className="font-bold text-xs truncate text-foreground">{activeSession.user.name}</h4>
-              <span className="text-[9px] text-muted-foreground capitalize mt-0.5 block truncate">
-                {role === "admin" ? (lang === "th" ? "ผู้ดูแลระบบ" : "Admin") : role === "director" ? (lang === "th" ? "ผู้บริหาร" : "Executive") : (activeSession.user as any).position || (lang === "th" ? "อาจารย์" : "Teacher")}
+              <h4 className="font-semibold text-xs truncate text-foreground">{activeSession.user.name}</h4>
+              <span className="text-[10px] text-muted-foreground capitalize block truncate">
+                {role === "admin" ? (lang === "th" ? "แอดมิน" : "Admin") : role === "director" ? (lang === "th" ? "ผู้บริหาร" : "Executive") : (activeSession.user as any).position || (lang === "th" ? "อาจารย์" : "Teacher")}
               </span>
             </div>
           </div>
@@ -616,10 +603,11 @@ export default function Workspace() {
               await signOut();
               router.push("/login");
             }}
-            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-all"
+            className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-rose-500 transition-all"
             title={lang === "th" ? "ออกจากระบบ" : "Sign Out"}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">{lang === "th" ? "ออกจากระบบ" : "Logout"}</span>
           </button>
         </div>
       </aside>
@@ -628,50 +616,61 @@ export default function Workspace() {
       <div className="flex-1 flex flex-col overflow-hidden">
         
         {/* top header bar */}
-        <header className="h-16 border-b border-border/80 bg-background/65 backdrop-blur-md px-4 flex items-center justify-between z-10 shrink-0">
+        <header className="h-14 border-b border-border/40 bg-white dark:bg-background px-6 flex items-center justify-between z-10 shrink-0">
           
-          {/* Menu Mobile Title & Hamburger placeholder */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center md:hidden">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="font-bold text-sm md:text-base leading-none text-foreground">{activeMenu}</h2>
-              <p className="text-[10px] text-muted-foreground hidden sm:block mt-1 font-semibold uppercase tracking-wider">School Operating System Workspace</p>
-            </div>
-          </div>
-
-          {/* Quick Search Spotlight command palette launcher */}
-          <div className="flex items-center gap-3 flex-1 max-w-sm mx-4">
-            <button 
-              onClick={() => setSearchOpen(true)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-muted/40 hover:bg-muted border border-border/80 text-xs text-muted-foreground font-semibold transition-all group"
-            >
-              <div className="flex items-center gap-2">
-                <Search className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span>ค้นหาด่วน หรือกด Ctrl+K</span>
-              </div>
-              <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border bg-background text-[9px] font-bold">
-                <span>Ctrl</span>
-                <span>K</span>
-              </kbd>
-            </button>
+          {/* Greeting with username */}
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-sm text-foreground">
+              {lang === "th" ? "ยินดีต้อนรับ," : "Welcome,"} {activeSession.user.name} 👋
+            </h2>
           </div>
 
           {/* Right utility shortcuts */}
           <div className="flex items-center gap-2">
-            
-            {/* Supabase Status Badge */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-wider relative">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping absolute left-3" />
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Supabase Live</span>
+
+            {/* Notification Bell */}
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                  triggerToast("🔔 เคลียร์แจ้งเตือน", "เปิดอ่านแจ้งเตือนทั้งหมดเรียบร้อยแล้ว");
+                }}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-muted text-slate-400 hover:text-foreground relative transition-all"
+              >
+                <Bell className="w-[18px] h-[18px]" />
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                    {unreadNotifCount}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* Dynamic Role Swapper (Smart Dashboard Core) */}
-            <div className="flex items-center gap-1.5 bg-muted/50 p-1 rounded-xl border border-border">
+            {/* Language Switcher - pill style */}
+            <button 
+              onClick={() => {
+                const newLang = lang === "th" ? "en" : "th";
+                setLang(newLang);
+                addAuditLog("SWITCH_LANGUAGE", `เปลี่ยนภาษาอินเตอร์เฟสเป็น: ${newLang === "th" ? "ภาษาไทย" : "English"}`);
+                triggerToast(lang === "th" ? "🇺🇸 Switched to English" : "🇹🇭 เปลี่ยนเป็นภาษาไทย", lang === "th" ? "Application language is now English." : "เปลี่ยนการแสดงผลเป็นภาษาไทยเรียบร้อยแล้ว");
+              }}
+              className="h-8 px-3 rounded-lg bg-slate-100 dark:bg-muted hover:bg-slate-200 dark:hover:bg-muted/80 text-slate-600 dark:text-muted-foreground font-semibold text-xs transition-all"
+            >
+              {lang === "th" ? "TH" : "EN"}
+            </button>
+
+            {/* Dark Mode Toggle */}
+            <button 
+              onClick={() => setDarkMode(prev => !prev)}
+              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-muted text-slate-400 hover:text-foreground transition-all"
+            >
+              {darkMode ? <Sun className="w-[18px] h-[18px] text-amber-500" /> : <Moon className="w-[18px] h-[18px]" />}
+            </button>
+
+            {/* Role Swapper - compact */}
+            <div className="hidden lg:flex items-center">
               <select
-                className="bg-transparent border-0 outline-none text-xs font-bold text-foreground px-2 py-1"
+                className="h-8 bg-slate-100 dark:bg-muted border-0 outline-none text-xs font-semibold text-slate-600 dark:text-muted-foreground px-3 py-1 rounded-lg appearance-none cursor-pointer"
                 value={role}
                 onChange={(e) => {
                   const newRole = e.target.value as UserRole;
@@ -686,46 +685,6 @@ export default function Workspace() {
                 <option value="admin">ผู้ดูแลระบบ (Admin)</option>
               </select>
             </div>
-
-            {/* Notification Drawer Trigger */}
-            <div className="relative">
-              <button 
-                onClick={() => {
-                  setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                  triggerToast("🔔 เคลียร์แจ้งเตือน", "เปิดอ่านแจ้งเตือนทั้งหมดเรียบร้อยแล้ว");
-                }}
-                className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground relative transition-all"
-              >
-                <Bell className="w-4 h-4" />
-                {unreadNotifCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-bounce">
-                    {unreadNotifCount}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Language Switcher */}
-            <button 
-              onClick={() => {
-                const newLang = lang === "th" ? "en" : "th";
-                setLang(newLang);
-                addAuditLog("SWITCH_LANGUAGE", `เปลี่ยนภาษาอินเตอร์เฟสเป็น: ${newLang === "th" ? "ภาษาไทย" : "English"}`);
-                triggerToast(lang === "th" ? "🇺🇸 Switched to English" : "🇹🇭 เปลี่ยนเป็นภาษาไทย", lang === "th" ? "Application language is now English." : "เปลี่ยนการแสดงผลเป็นภาษาไทยเรียบร้อยแล้ว");
-              }}
-              className="p-2 h-9 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground font-bold text-xs transition-all flex items-center gap-1.5 border border-border bg-card shadow-sm px-3"
-              title={lang === "th" ? "เปลี่ยนเป็นภาษาอังกฤษ" : "Switch to Thai"}
-            >
-              <span>{lang === "th" ? "🇹🇭 TH" : "🇺🇸 EN"}</span>
-            </button>
-
-            {/* Dark Mode Toggle */}
-            <button 
-              onClick={() => setDarkMode(prev => !prev)}
-              className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-            >
-              {darkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
-            </button>
 
           </div>
         </header>

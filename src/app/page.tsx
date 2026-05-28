@@ -2054,7 +2054,7 @@ export default function Workspace() {
 
         {/* 📱 MOBILE BOTTOM NAV BAR */}
         <nav className="md:hidden h-16 border-t border-border/80 bg-background/80 backdrop-blur-md flex items-center justify-around shrink-0 px-2">
-          {sidebarItems.slice(0, 5).map((item) => {
+          {sidebarMainItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeMenu === item.name;
             return (
@@ -2073,7 +2073,7 @@ export default function Workspace() {
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-[9px] font-bold">{item.desc}</span>
+                <span className="text-[9px] font-bold">{item.label}</span>
               </button>
             );
           })}

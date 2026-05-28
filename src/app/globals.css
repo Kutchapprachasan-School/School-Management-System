@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -9,9 +9,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: 'Outfit', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: 'Inter', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: 'Outfit', 'Noto Sans Thai', sans-serif;
+  --font-heading: 'Poppins', 'Noto Sans Thai', sans-serif;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -55,107 +55,98 @@
 }
 
 :root {
-  /* Ultra Modern Light Mode with Vibrant Indigo & Violet Accents */
-  --background: oklch(0.99 0.005 240);
-  --foreground: oklch(0.2 0.04 250);
+  /* COVID/Health Dashboard Light Mode */
+  --background: #F4F8FC;
+  --foreground: #1E293B;
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.04 250);
+  --card: rgba(255, 255, 255, 0.7);
+  --card-foreground: #1E293B;
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.04 250);
+  --popover: rgba(255, 255, 255, 0.9);
+  --popover-foreground: #1E293B;
 
-  --primary: oklch(0.55 0.22 260);
-  /* Vibrant Indigo */
-  --primary-foreground: oklch(0.99 0.005 240);
+  --primary: #00C6FF;
+  --primary-foreground: #FFFFFF;
 
-  --secondary: oklch(0.96 0.02 260);
-  /* Soft Lilac */
-  --secondary-foreground: oklch(0.4 0.18 260);
+  --secondary: #0072FF;
+  --secondary-foreground: #FFFFFF;
 
-  --muted: oklch(0.97 0.01 250);
-  --muted-foreground: oklch(0.5 0.04 250);
+  --muted: #E2E8F0;
+  --muted-foreground: #64748B;
 
-  --accent: oklch(0.95 0.03 140);
-  /* Fresh minty green/teal accent */
-  --accent-foreground: oklch(0.35 0.12 150);
+  --accent: #6EE7F9;
+  --accent-foreground: #0F172A;
 
-  --destructive: oklch(0.6 0.2 25);
-  --destructive-foreground: oklch(0.99 0.005 25);
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
 
-  --border: oklch(0.92 0.01 250);
-  --input: oklch(0.92 0.01 250);
-  --ring: oklch(0.55 0.22 260 / 40%);
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: rgba(0, 198, 255, 0.4);
 
   /* Modern soft charts */
-  --chart-1: oklch(0.6 0.2 260);
-  /* Indigo */
-  --chart-2: oklch(0.65 0.18 140);
-  /* Teal/Emerald */
-  --chart-3: oklch(0.7 0.15 40);
-  /* Amber/Orange */
-  --chart-4: oklch(0.55 0.2 330);
-  /* Rose/Pink */
-  --chart-5: oklch(0.5 0.15 200);
-  /* Cyan */
+  --chart-1: #00C6FF;
+  --chart-2: #0072FF;
+  --chart-3: #6EE7F9;
+  --chart-4: #10B981;
+  --chart-5: #F59E0B;
 
-  --radius: 0.75rem;
+  --radius: 1.5rem;
 
-  --sidebar: oklch(0.98 0.005 240);
-  --sidebar-foreground: oklch(0.25 0.03 250);
-  --sidebar-primary: oklch(0.55 0.22 260);
-  --sidebar-primary-foreground: oklch(0.99 0.005 240);
-  --sidebar-accent: oklch(0.94 0.02 260);
-  --sidebar-accent-foreground: oklch(0.4 0.18 260);
-  --sidebar-border: oklch(0.93 0.01 250);
-  --sidebar-ring: oklch(0.55 0.22 260 / 30%);
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1E293B;
+  --sidebar-primary: #00C6FF;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F1F5F9;
+  --sidebar-accent-foreground: #0F172A;
+  --sidebar-border: #E2E8F0;
+  --sidebar-ring: rgba(0, 198, 255, 0.3);
 }
 
 .dark {
-  /* Mysterious Dark Theme with Neon Cyberpunk Vibes */
-  --background: oklch(0.12 0.015 250);
-  --foreground: oklch(0.93 0.015 240);
+  /* COVID/Health Dashboard Dark Mode */
+  --background: #0F172A;
+  --foreground: #F8FAFC;
 
-  --card: oklch(0.16 0.02 250);
-  --card-foreground: oklch(0.93 0.015 240);
+  --card: rgba(30, 41, 59, 0.7);
+  --card-foreground: #F8FAFC;
 
-  --popover: oklch(0.15 0.02 250);
-  --popover-foreground: oklch(0.93 0.015 240);
+  --popover: rgba(30, 41, 59, 0.9);
+  --popover-foreground: #F8FAFC;
 
-  --primary: oklch(0.65 0.2 255);
-  /* Lighter vibrant indigo */
-  --primary-foreground: oklch(0.1 0.02 250);
+  --primary: #00C6FF;
+  --primary-foreground: #0F172A;
 
-  --secondary: oklch(0.2 0.04 260);
-  --secondary-foreground: oklch(0.85 0.05 260);
+  --secondary: #0072FF;
+  --secondary-foreground: #F8FAFC;
 
-  --muted: oklch(0.2 0.02 250);
-  --muted-foreground: oklch(0.65 0.03 240);
+  --muted: #334155;
+  --muted-foreground: #94A3B8;
 
-  --accent: oklch(0.25 0.06 140);
-  --accent-foreground: oklch(0.85 0.06 140);
+  --accent: #6EE7F9;
+  --accent-foreground: #0F172A;
 
-  --destructive: oklch(0.5 0.18 25);
-  --destructive-foreground: oklch(0.95 0.02 25);
+  --destructive: #EF4444;
+  --destructive-foreground: #F8FAFC;
 
-  --border: oklch(0.22 0.02 250);
-  --input: oklch(0.22 0.02 250);
-  --ring: oklch(0.65 0.2 255 / 50%);
+  --border: #334155;
+  --input: #334155;
+  --ring: rgba(0, 198, 255, 0.5);
 
-  --chart-1: oklch(0.65 0.2 255);
-  --chart-2: oklch(0.7 0.15 140);
-  --chart-3: oklch(0.75 0.15 40);
-  --chart-4: oklch(0.65 0.18 330);
-  --chart-5: oklch(0.6 0.15 200);
+  --chart-1: #00C6FF;
+  --chart-2: #0072FF;
+  --chart-3: #6EE7F9;
+  --chart-4: #10B981;
+  --chart-5: #F59E0B;
 
-  --sidebar: oklch(0.14 0.015 250);
-  --sidebar-foreground: oklch(0.88 0.015 240);
-  --sidebar-primary: oklch(0.65 0.2 255);
-  --sidebar-primary-foreground: oklch(0.1 0.02 250);
-  --sidebar-accent: oklch(0.2 0.03 250);
-  --sidebar-accent-foreground: oklch(0.9 0.02 240);
-  --sidebar-border: oklch(0.2 0.02 250);
-  --sidebar-ring: oklch(0.65 0.2 255 / 30%);
+  --sidebar: #1E293B;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #00C6FF;
+  --sidebar-primary-foreground: #0F172A;
+  --sidebar-accent: #334155;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: #334155;
+  --sidebar-ring: rgba(0, 198, 255, 0.3);
 }
 
 @layer base {
@@ -177,23 +168,33 @@
   }
 }
 
+.font-th {
+  font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+  letter-spacing: 0.2px;
+}
+
+.font-en {
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.2px;
+}
+
 /* Glassmorphism Classes */
 .glass {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .dark .glass {
-  background: rgba(20, 20, 25, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .glass-card {
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 /* Custom Webkit scrollbar */

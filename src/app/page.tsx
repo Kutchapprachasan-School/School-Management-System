@@ -28,6 +28,11 @@ import SettingsPage from "./eleave/settings/page";
 import { ScheduleGrid } from "@/components/timetable/ScheduleGrid";
 import SubstitutionTab from "@/components/timetable/SubstitutionTab";
 
+// Import real database actions
+import { getSystemInitialData } from "@/app/actions/init";
+import { createSubject, deleteSubject } from "@/app/actions/subject";
+import { createClassroom, deleteClassroom } from "@/app/actions/classroom";
+
 export default function Workspace() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
@@ -66,60 +71,99 @@ export default function Workspace() {
     { id: "4", name: "ม.6/1", grade: "ม.6", room: "1" },
   ]);
 
-  const handleAddSubject = (e: React.FormEvent<HTMLFormElement>) => {
+  const [loadingDb, setLoadingDb] = useState(true);
+
+  const refreshDbData = async () => {
+    try {
+      const res = await getSystemInitialData();
+      if (res.success && res.data) {
+        if (res.data.teachers.length > 0) {
+          setTeachers(res.data.teachers as any);
+        }
+        if (res.data.leaveRequests.length > 0) {
+          setLeaveRequests(res.data.leaveRequests as any);
+        }
+        if (res.data.subjects.length > 0) {
+          setSubjectsList(res.data.subjects);
+        }
+        if (res.data.classrooms.length > 0) {
+          setClassroomsList(res.data.classrooms);
+        }
+        if (res.data.logs.length > 0) {
+          setAuditLogs(res.data.logs as any);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load real DB data:", err);
+    }
+  };
+
+  useEffect(() => {
+    async function loadData() {
+      setLoadingDb(true);
+      await refreshDbData();
+      setLoadingDb(false);
+    }
+    loadData();
+  }, []);
+
+  const handleAddSubject = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const code = fd.get("code") as string;
     const name = fd.get("name") as string;
-    const credits = Number(fd.get("credits") || 1);
-    const hours = Number(fd.get("hours") || 2);
-    const color = fd.get("color") as string || "#3b82f6";
     
     if (!code || !name) return;
-    const newSub = {
-      id: Date.now().toString(),
-      code,
-      name,
-      credits,
-      hours,
-      color,
-    };
-    setSubjectsList(prev => [newSub, ...prev]);
-    addAuditLog("CREATE_SUBJECT", `เพิ่มรายวิชา: ${code} - ${name}`);
-    triggerToast("📚 เพิ่มรายวิชาเรียบร้อย", `วิชา ${code} ${name} ได้รับการบันทึกลงฐานข้อมูลแล้ว`);
-    e.currentTarget.reset();
+    
+    const res = await createSubject(fd);
+    if (res.success) {
+      addAuditLog("CREATE_SUBJECT", `เพิ่มรายวิชา: ${code} - ${name}`);
+      triggerToast("📚 เพิ่มรายวิชาเรียบร้อย", `วิชา ${code} ${name} ได้รับการบันทึกลงฐานข้อมูลแล้ว`);
+      e.currentTarget.reset();
+      await refreshDbData();
+    } else {
+      triggerToast("⚠️ เกิดข้อผิดพลาด", res.error || "ไม่สามารถเพิ่มรายวิชาได้");
+    }
   };
 
-  const handleDeleteSubject = (id: string, code: string) => {
-    setSubjectsList(prev => prev.filter(s => s.id !== id));
-    addAuditLog("DELETE_SUBJECT", `ลบรายวิชา ID ${id} (${code})`);
-    triggerToast("🗑️ ลบรายวิชาสำเร็จ", `ถอนข้อมูลรายวิชาเรียบร้อยแล้ว`);
+  const handleDeleteSubject = async (id: string, code: string) => {
+    const res = await deleteSubject(id);
+    if (res.success) {
+      addAuditLog("DELETE_SUBJECT", `ลบรายวิชา ID ${id} (${code})`);
+      triggerToast("🗑️ ลบรายวิชาสำเร็จ", `ถอนข้อมูลรายวิชาเรียบร้อยแล้ว`);
+      await refreshDbData();
+    } else {
+      triggerToast("⚠️ เกิดข้อผิดพลาด", res.error || "ไม่สามารถลบรายวิชาได้");
+    }
   };
 
-  const handleAddClassroom = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddClassroom = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const name = fd.get("name") as string;
-    const grade = fd.get("grade") as string;
-    const room = fd.get("room") as string;
     
     if (!name) return;
-    const newClass = {
-      id: Date.now().toString(),
-      name,
-      grade,
-      room,
-    };
-    setClassroomsList(prev => [newClass, ...prev]);
-    addAuditLog("CREATE_CLASSROOM", `เพิ่มชั้นเรียน: ${name}`);
-    triggerToast("🏫 เพิ่มห้องเรียนเรียบร้อย", `ชั้นเรียน ${name} ได้รับการบันทึกลงฐานข้อมูลแล้ว`);
-    e.currentTarget.reset();
+    
+    const res = await createClassroom(fd);
+    if (res.success) {
+      addAuditLog("CREATE_CLASSROOM", `เพิ่มชั้นเรียน: ${name}`);
+      triggerToast("🏫 เพิ่มห้องเรียนเรียบร้อย", `ชั้นเรียน ${name} ได้รับการบันทึกลงฐานข้อมูลแล้ว`);
+      e.currentTarget.reset();
+      await refreshDbData();
+    } else {
+      triggerToast("⚠️ เกิดข้อผิดพลาด", res.error || "ไม่สามารถเพิ่มชั้นเรียนได้");
+    }
   };
 
-  const handleDeleteClassroom = (id: string, name: string) => {
-    setClassroomsList(prev => prev.filter(c => c.id !== id));
-    addAuditLog("DELETE_CLASSROOM", `ลบชั้นเรียน ID ${id} (${name})`);
-    triggerToast("🗑️ ลบห้องเรียนสำเร็จ", `ถอนข้อมูลชั้นเรียนเรียบร้อยแล้ว`);
+  const handleDeleteClassroom = async (id: string, name: string) => {
+    const res = await deleteClassroom(id);
+    if (res.success) {
+      addAuditLog("DELETE_CLASSROOM", `ลบชั้นเรียน ID ${id} (${name})`);
+      triggerToast("🗑️ ลบห้องเรียนสำเร็จ", `ถอนข้อมูลชั้นเรียนเรียบร้อยแล้ว`);
+      await refreshDbData();
+    } else {
+      triggerToast("⚠️ เกิดข้อผิดพลาด", res.error || "ไม่สามารถลบชั้นเรียนได้");
+    }
   };
 
   const mockSession = {
@@ -617,6 +661,13 @@ export default function Workspace() {
           {/* Right utility shortcuts */}
           <div className="flex items-center gap-2">
             
+            {/* Supabase Status Badge */}
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px] uppercase tracking-wider relative">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping absolute left-3" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Supabase Live</span>
+            </div>
+
             {/* Dynamic Role Swapper (Smart Dashboard Core) */}
             <div className="flex items-center gap-1.5 bg-muted/50 p-1 rounded-xl border border-border">
               <select

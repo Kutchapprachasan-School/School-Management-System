@@ -40,47 +40,47 @@ export default function SmartDashboard({
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Overview stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-3xl glass glass-card hover:bg-card/75 transition-all shadow-sm">
+        <div className="p-4 rounded-2xl glass glass-card hover:bg-card/75 transition-all shadow-sm">
           <div className="flex justify-between items-start">
             <span className="text-xs text-muted-foreground font-semibold">คาบสอนวันนี้</span>
             <span className="p-2 rounded-xl bg-primary/10 text-primary"><BookOpen className="w-4 h-4" /></span>
           </div>
-          <p className="text-3xl font-bold text-primary dark:text-indigo-400 mt-2">4 คาบ</p>
+          <p className="text-2xl font-bold text-primary dark:text-indigo-400 mt-2">4 คาบ</p>
           <span className="text-[10px] text-muted-foreground">ชั้น ม.6/1 (วิชาภาษาไทย)</span>
         </div>
 
-        <div className="p-4 rounded-3xl glass glass-card hover:bg-card/75 transition-all shadow-sm">
+        <div className="p-4 rounded-2xl glass glass-card hover:bg-card/75 transition-all shadow-sm">
           <div className="flex justify-between items-start">
             <span className="text-xs text-muted-foreground font-semibold">นักเรียนขาดเรียน</span>
             <span className="p-2 rounded-xl bg-rose-500/10 text-rose-500"><ShieldAlert className="w-4 h-4" /></span>
           </div>
-          <p className="text-3xl font-bold text-rose-500 mt-2">{absentToday} คน</p>
+          <p className="text-2xl font-bold text-rose-500 mt-2">{absentToday} คน</p>
           <span className="text-[10px] text-muted-foreground">จากทั้งหมด {totalStudentsCount} คน</span>
         </div>
 
-        <div className="p-4 rounded-3xl glass glass-card hover:bg-card/75 transition-all shadow-sm">
+        <div className="p-4 rounded-2xl glass glass-card hover:bg-card/75 transition-all shadow-sm">
           <div className="flex justify-between items-start">
             <span className="text-xs text-muted-foreground font-semibold">นักเรียนมาสาย</span>
             <span className="p-2 rounded-xl bg-amber-500/10 text-amber-500"><Clock className="w-4 h-4" /></span>
           </div>
-          <p className="text-3xl font-bold text-amber-500 mt-2">{lateToday} คน</p>
+          <p className="text-2xl font-bold text-amber-500 mt-2">{lateToday} คน</p>
           <span className="text-[10px] text-muted-foreground">ควรติดตามระเบียบแถว</span>
         </div>
 
-        <div className="p-4 rounded-3xl glass glass-card hover:bg-card/75 transition-all shadow-sm">
+        <div className="p-4 rounded-2xl glass glass-card hover:bg-card/75 transition-all shadow-sm">
           <div className="flex justify-between items-start">
             <span className="text-xs text-muted-foreground font-semibold">เคสห้องพยาบาล</span>
             <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500"><HeartPulse className="w-4 h-4" /></span>
           </div>
-          <p className="text-3xl font-bold text-emerald-500 mt-2">2 เคส</p>
+          <p className="text-2xl font-bold text-emerald-500 mt-2">2 เคส</p>
           <span className="text-[10px] text-muted-foreground">มีการจ่ายยาพาราเซตามอล</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Timetable slots */}
-        <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card space-y-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+        <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary" />
             ตารางสอนประจำวันนี้ (ม.6/1)
           </h3>
@@ -129,8 +129,8 @@ export default function SmartDashboard({
         </div>
 
         {/* Tasks Checklist */}
-        <div className="p-6 rounded-3xl glass glass-card space-y-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+        <div className="p-6 rounded-2xl glass glass-card space-y-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <CheckSquare className="w-5 h-5 text-primary" />
             สิ่งที่ต้องทำในระบบ (Tasks Checklist)
           </h3>
@@ -176,10 +176,10 @@ export default function SmartDashboard({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Total Attendance Chart mock */}
-        <div className="p-6 rounded-3xl glass glass-card flex items-center justify-between shadow-sm">
+        <div className="p-6 rounded-2xl glass glass-card flex items-center justify-between shadow-sm">
           <div>
             <h3 className="text-xs font-semibold text-muted-foreground uppercase">อัตราการเข้าเรียนเฉลี่ยวันนี้</h3>
-            <p className="text-4xl font-bold text-primary dark:text-indigo-400 mt-2">96.8%</p>
+            <p className="text-3xl font-bold text-primary dark:text-indigo-400 mt-2">96.8%</p>
             <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
               ดีกว่าเมื่อวาน +0.5%
@@ -196,10 +196,10 @@ export default function SmartDashboard({
         </div>
 
         {/* Student at Risk Indicator */}
-        <div className="p-6 rounded-3xl glass glass-card flex items-center justify-between shadow-sm">
+        <div className="p-6 rounded-2xl glass glass-card flex items-center justify-between shadow-sm">
           <div>
             <h3 className="text-xs font-semibold text-muted-foreground uppercase">นักเรียนกลุ่มเสี่ยงวิกฤต</h3>
-            <p className="text-4xl font-bold text-rose-500 mt-2">{riskStudents.length} คน</p>
+            <p className="text-3xl font-bold text-rose-500 mt-2">{riskStudents.length} คน</p>
             <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
               ต้องการความช่วยเหลือด่วน
@@ -207,24 +207,24 @@ export default function SmartDashboard({
           </div>
           <button 
             onClick={() => onNavigate("Analytics", "risk")}
-            className="p-3 rounded-3xl bg-rose-500/10 text-rose-500 hover:scale-105 transition-transform"
+            className="p-3 rounded-2xl bg-rose-500/10 text-rose-500 hover:scale-105 transition-transform"
           >
             <AlertTriangle className="w-6 h-6" />
           </button>
         </div>
 
         {/* School KPI */}
-        <div className="p-6 rounded-3xl glass glass-card flex items-center justify-between shadow-sm">
+        <div className="p-6 rounded-2xl glass glass-card flex items-center justify-between shadow-sm">
           <div>
             <h3 className="text-xs font-semibold text-muted-foreground uppercase">งานค้างอนุมัติสะสม</h3>
-            <p className="text-4xl font-bold text-amber-500 mt-2">{pendingLeaves.length} เรื่อง</p>
+            <p className="text-3xl font-bold text-amber-500 mt-2">{pendingLeaves.length} เรื่อง</p>
             <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
               ใบลาครู / ใช้ห้อง / ใช้รถ
             </span>
           </div>
           <button 
             onClick={() => onNavigate("Operations", "requests")}
-            className="p-3 rounded-3xl bg-amber-500/10 text-amber-500 hover:scale-105 transition-transform"
+            className="p-3 rounded-2xl bg-amber-500/10 text-amber-500 hover:scale-105 transition-transform"
           >
             <FileText className="w-6 h-6" />
           </button>
@@ -235,8 +235,8 @@ export default function SmartDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Pending leave approvals list */}
-        <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card space-y-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+        <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-primary" />
             เอกสารรอการอนุมัติ (Workflow Engine)
           </h3>
@@ -275,8 +275,8 @@ export default function SmartDashboard({
         </div>
 
         {/* Student Risk Quickview */}
-        <div className="p-6 rounded-3xl glass glass-card space-y-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+        <div className="p-6 rounded-2xl glass glass-card space-y-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-rose-500" />
             นักเรียนเสี่ยงวิกฤต (AI Student Risk)
           </h3>
@@ -317,31 +317,31 @@ export default function SmartDashboard({
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-3xl glass glass-card shadow-sm flex flex-col items-center text-center">
+        <div className="p-4 rounded-2xl glass glass-card shadow-sm flex flex-col items-center text-center">
           <Award className="w-8 h-8 text-amber-500" />
           <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-2">คะแนนพฤติกรรมสะสม</span>
-          <span className="text-3xl font-bold text-foreground mt-1">95</span>
+          <span className="text-2xl font-bold text-foreground mt-1">95</span>
           <span className="text-[9px] text-emerald-500 font-semibold mt-0.5">พฤติกรรมดีเยี่ยม</span>
         </div>
 
-        <div className="p-4 rounded-3xl glass glass-card shadow-sm flex flex-col items-center text-center">
+        <div className="p-4 rounded-2xl glass glass-card shadow-sm flex flex-col items-center text-center">
           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
           <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-2">อัตราการมาเรียนของฉัน</span>
-          <span className="text-3xl font-bold text-foreground mt-1">98%</span>
+          <span className="text-2xl font-bold text-foreground mt-1">98%</span>
           <span className="text-[9px] text-muted-foreground mt-0.5">ขาด 1 ครั้ง สาย 1 ครั้ง</span>
         </div>
 
-        <div className="p-4 rounded-3xl glass glass-card shadow-sm flex flex-col items-center text-center">
+        <div className="p-4 rounded-2xl glass glass-card shadow-sm flex flex-col items-center text-center">
           <GraduationCap className="w-8 h-8 text-primary" />
           <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-2">เกรดเฉลี่ยสะสม GPA</span>
-          <span className="text-3xl font-bold text-foreground mt-1">3.85</span>
+          <span className="text-2xl font-bold text-foreground mt-1">3.85</span>
           <span className="text-[9px] text-muted-foreground mt-0.5">ภาคเรียนที่ 1/2569</span>
         </div>
 
-        <div className="p-4 rounded-3xl glass glass-card shadow-sm flex flex-col items-center text-center">
+        <div className="p-4 rounded-2xl glass glass-card shadow-sm flex flex-col items-center text-center">
           <BookOpen className="w-8 h-8 text-primary" />
           <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-2">การบ้านค้างส่ง</span>
-          <span className="text-3xl font-bold text-rose-500 mt-1">1 งาน</span>
+          <span className="text-2xl font-bold text-rose-500 mt-1">1 งาน</span>
           <span className="text-[9px] text-muted-foreground mt-0.5">กำหนดส่งพรุ่งนี้</span>
         </div>
       </div>
@@ -349,8 +349,8 @@ export default function SmartDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Today's schedule */}
-        <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card space-y-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+        <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <Clock className="w-5 h-5 text-primary" />
             ตารางเรียนของฉันวันนี้ (ม.6/1)
           </h3>
@@ -374,8 +374,8 @@ export default function SmartDashboard({
         </div>
 
         {/* Homework list */}
-        <div className="p-6 rounded-3xl glass glass-card space-y-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+        <div className="p-6 rounded-2xl glass glass-card space-y-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <CheckSquare className="w-5 h-5 text-primary" />
             การบ้าน / ภารกิจของฉัน
           </h3>
@@ -406,47 +406,47 @@ export default function SmartDashboard({
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Admin stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-3xl glass glass-card shadow-sm">
+        <div className="p-4 rounded-2xl glass glass-card shadow-sm">
           <div className="flex justify-between items-start">
             <span className="text-xs text-muted-foreground font-semibold">ผู้ใช้งานในระบบทั้งหมด</span>
             <span className="p-2 rounded-xl bg-primary/10 text-primary"><Users className="w-4 h-4" /></span>
           </div>
-          <p className="text-3xl font-bold text-foreground mt-2">1,240 คน</p>
+          <p className="text-2xl font-bold text-foreground mt-2">1,240 คน</p>
           <span className="text-[10px] text-muted-foreground">ใช้งานอยู่ (Active) 99%</span>
         </div>
 
-        <div className="p-4 rounded-3xl glass glass-card shadow-sm">
+        <div className="p-4 rounded-2xl glass glass-card shadow-sm">
           <div className="flex justify-between items-start">
             <span className="text-xs text-muted-foreground font-semibold">สถานะเซิร์ฟเวอร์ (API Nodes)</span>
             <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500"><Database className="w-4 h-4" /></span>
           </div>
-          <p className="text-3xl font-bold text-emerald-500 mt-2">เสถียร</p>
+          <p className="text-2xl font-bold text-emerald-500 mt-2">เสถียร</p>
           <span className="text-[10px] text-muted-foreground">Uptime 99.98% (Supabase)</span>
         </div>
 
-        <div className="p-4 rounded-3xl glass glass-card shadow-sm">
+        <div className="p-4 rounded-2xl glass glass-card shadow-sm">
           <div className="flex justify-between items-start">
             <span className="text-xs text-muted-foreground font-semibold">ตารางสกรีนฐานข้อมูล</span>
             <span className="p-2 rounded-xl bg-primary/10 text-primary"><FileText className="w-4 h-4" /></span>
           </div>
-          <p className="text-3xl font-bold text-primary dark:text-indigo-400 mt-2">42 ตาราง</p>
+          <p className="text-2xl font-bold text-primary dark:text-indigo-400 mt-2">42 ตาราง</p>
           <span className="text-[10px] text-muted-foreground">เชื่อมโยงด้วย Drizzle ORM</span>
         </div>
 
-        <div className="p-4 rounded-3xl glass glass-card shadow-sm">
+        <div className="p-4 rounded-2xl glass glass-card shadow-sm">
           <div className="flex justify-between items-start">
             <span className="text-xs text-muted-foreground font-semibold">กติกาอัตโนมัติที่เปิดใช้งาน</span>
             <span className="p-2 rounded-xl bg-amber-500/10 text-amber-500"><BellRing className="w-4 h-4" /></span>
           </div>
-          <p className="text-3xl font-bold text-amber-500 mt-2">5 กฎ</p>
+          <p className="text-2xl font-bold text-amber-500 mt-2">5 กฎ</p>
           <span className="text-[10px] text-muted-foreground">ผ่าน Rule Engine API Node</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* System setup status */}
-        <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card space-y-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+        <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <Database className="w-5 h-5 text-primary" />
             โครงสร้าง Core Systems (Hidden Core Database Status)
           </h3>
@@ -472,8 +472,8 @@ export default function SmartDashboard({
         </div>
 
         {/* Setup parameters */}
-        <div className="p-6 rounded-3xl glass glass-card space-y-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+        <div className="p-6 rounded-2xl glass glass-card space-y-4">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <Activity className="w-5 h-5 text-primary" />
             ปีการศึกษาปัจจุบัน
           </h3>

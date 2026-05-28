@@ -551,7 +551,7 @@ export default function Workspace() {
                 }}
                 className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-bold text-sm transition-all duration-200 group ${
                   isActive 
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/10 scale-[1.02]" 
+                    ? "bg-primary/5 text-primary font-bold scale-[1.02]" 
                     : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
                 }`}
               >
@@ -736,9 +736,9 @@ export default function Workspace() {
           {/* ==================== 1. HOME VIEW ==================== */}
           {activeMenu === "Home" && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 p-4 rounded-3xl border border-primary/10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 p-4 rounded-2xl border border-primary/10">
                 <div>
-                  <h2 className="text-lg font-bold text-foreground flex items-center gap-1.5">
+                  <h2 className="text-base font-bold text-foreground flex items-center gap-1.5">
                     <Sparkles className="w-5 h-5 text-primary animate-spin" />
                     สวัสดีครับ, ยินดีต้อนรับกลับสู่ระบบ School OS
                   </h2>
@@ -817,7 +817,7 @@ export default function Workspace() {
                           setTimelineOpen(true);
                           addAuditLog("VIEW_STUDENT_TIMELINE", `เรียกดูข้อมูล Timeline Engine ของ ${student.fullName}`);
                         }}
-                        className="p-4 rounded-3xl glass glass-card hover:bg-card hover:border-primary/40 cursor-pointer shadow-sm transition-all group flex flex-col justify-between h-40"
+                        className="p-4 rounded-2xl glass glass-card hover:bg-card hover:border-primary/40 cursor-pointer shadow-sm transition-all group flex flex-col justify-between h-40"
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
@@ -866,7 +866,7 @@ export default function Workspace() {
               {/* SubTab 2: Teachers List */}
               {activeSubTab === "teachers" && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="p-6 rounded-3xl glass glass-card space-y-4">
+                  <div className="p-6 rounded-2xl glass glass-card space-y-4">
                     <h3 className="text-sm font-bold text-foreground">ทะเบียนข้อมูลบุคลากรครู</h3>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
@@ -902,7 +902,7 @@ export default function Workspace() {
               {activeSubTab === "health" && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
                   {/* Log new visit form */}
-                  <div className="p-6 rounded-3xl glass glass-card space-y-4 h-fit">
+                  <div className="p-6 rounded-2xl glass glass-card space-y-4 h-fit">
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
                       <Plus className="w-4 h-4 text-emerald-500" />
                       บันทึกการเข้ารับการรักษาพยาบาล
@@ -966,7 +966,7 @@ export default function Workspace() {
                   </div>
 
                   {/* Health log grid list */}
-                  <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card space-y-4">
+                  <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4">
                     <h3 className="text-sm font-bold text-foreground">สมุดบันทึกประวัติห้องพยาบาลประจำวันนี้</h3>
                     <div className="space-y-3">
                       {healthVisits.map((visit) => (
@@ -1022,7 +1022,7 @@ export default function Workspace() {
 
               {/* SubTab 1: Interactive Attendance check in */}
               {activeSubTab === "attendance" && (
-                <div className="p-6 rounded-3xl glass glass-card space-y-4 animate-in fade-in duration-200">
+                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
                   <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                     <div>
                       <h3 className="text-sm font-bold text-foreground">เช็คชื่อนักเรียนเข้าร่วมแถวและคาบเรียนโฮมรูม ม.6/1</h3>
@@ -1114,12 +1114,12 @@ export default function Workspace() {
               {activeSubTab === "teaching" && (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   {/* AI Timetable & Substitution Portal Header */}
-                  <div className="relative overflow-hidden bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-background border border-blue-500/20 p-6 rounded-3xl shadow-lg flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+                  <div className="relative overflow-hidden bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-background border border-blue-500/20 p-6 rounded-2xl shadow-lg flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[60px] pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] pointer-events-none" />
                     
                     <div className="flex items-center gap-3.5 z-10">
-                      <div className="w-12 h-12 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/20 shrink-0">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/20 shrink-0">
                         <Sparkles className="w-6 h-6 text-white animate-pulse" />
                       </div>
                       <div>
@@ -1141,7 +1141,7 @@ export default function Workspace() {
                     </div>
                     
                     {/* Switcher Navigation */}
-                    <div className="flex flex-wrap gap-1 bg-muted/60 p-1.5 rounded-3xl border border-border/80 z-10 shrink-0 shadow-inner">
+                    <div className="flex flex-wrap gap-1 bg-muted/60 p-1.5 rounded-2xl border border-border/80 z-10 shrink-0 shadow-inner">
                       {[
                         { key: "scheduler", label: lang === "th" ? "จัดตารางสอน" : "AI Scheduler", icon: Calendar },
                         { key: "subjects", label: lang === "th" ? "จัดการรายวิชา" : "Subjects", icon: BookOpen },
@@ -1176,7 +1176,7 @@ export default function Workspace() {
                       
                       {/* Left Sidebar: Settings / Subjects Palette */}
                       <div className="lg:col-span-1 space-y-6">
-                        <div className="p-6 rounded-3xl glass glass-card space-y-4">
+                        <div className="p-6 rounded-2xl glass glass-card space-y-4">
                           <h3 className="text-sm font-bold text-foreground">
                             {lang === "th" ? "เลือกครูผู้สอน" : "Select Instructor"}
                           </h3>
@@ -1190,7 +1190,7 @@ export default function Workspace() {
                           </div>
                         </div>
 
-                        <div className="p-6 rounded-3xl glass glass-card space-y-4">
+                        <div className="p-6 rounded-2xl glass glass-card space-y-4">
                           <div>
                             <h3 className="text-sm font-bold text-foreground">
                               {lang === "th" ? "วิชาที่สอนได้ (ลากลงตาราง)" : "Available Subjects"}
@@ -1217,7 +1217,7 @@ export default function Workspace() {
                       </div>
 
                       {/* Right Section: Interactive Schedule Grid Editor */}
-                      <div className="lg:col-span-3 p-6 rounded-3xl glass glass-card space-y-4 overflow-hidden">
+                      <div className="lg:col-span-3 p-6 rounded-2xl glass glass-card space-y-4 overflow-hidden">
                         <div className="flex justify-between items-center">
                           <div>
                             <h3 className="text-sm font-bold text-foreground">
@@ -1247,7 +1247,7 @@ export default function Workspace() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       
                       {/* Add Subject form */}
-                      <div className="lg:col-span-1 p-6 rounded-3xl glass glass-card h-fit space-y-4">
+                      <div className="lg:col-span-1 p-6 rounded-2xl glass glass-card h-fit space-y-4">
                         <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                           <BookOpen className="w-4 h-4 text-primary" />
                           {lang === "th" ? "เพิ่มรายวิชาใหม่" : "Add New Subject"}
@@ -1314,7 +1314,7 @@ export default function Workspace() {
                       </div>
 
                       {/* Subjects table list */}
-                      <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card overflow-hidden space-y-4">
+                      <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card overflow-hidden space-y-4">
                         <h3 className="text-sm font-bold text-foreground">
                           {lang === "th" ? "ฐานข้อมูลรายวิชาสะสม" : "School Subjects Database"}
                         </h3>
@@ -1363,7 +1363,7 @@ export default function Workspace() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       
                       {/* Add Classroom Form */}
-                      <div className="lg:col-span-1 p-6 rounded-3xl glass glass-card h-fit space-y-4">
+                      <div className="lg:col-span-1 p-6 rounded-2xl glass glass-card h-fit space-y-4">
                         <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                           <Users className="w-4 h-4 text-primary" />
                           {lang === "th" ? "เพิ่มชั้นเรียนใหม่" : "Add New Class"}
@@ -1410,7 +1410,7 @@ export default function Workspace() {
                       </div>
 
                       {/* Classrooms table list */}
-                      <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card overflow-hidden space-y-4">
+                      <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card overflow-hidden space-y-4">
                         <h3 className="text-sm font-bold text-foreground">
                           {lang === "th" ? "ฐานข้อมูลห้องเรียน / ชั้นเรียน" : "Classrooms Database"}
                         </h3>
@@ -1461,7 +1461,7 @@ export default function Workspace() {
 
               {/* SubTab 3: Grade entries & SGS Sync */}
               {activeSubTab === "assessment" && (
-                <div className="p-6 rounded-3xl glass glass-card space-y-5 animate-in fade-in duration-200">
+                <div className="p-6 rounded-2xl glass glass-card space-y-5 animate-in fade-in duration-200">
                   <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                     <div>
                       <h3 className="text-sm font-bold text-foreground">สมุดคะแนนสอบปลายภาคและสรุปเกรดเฉลี่ย (ปพ.5)</h3>
@@ -1575,12 +1575,12 @@ export default function Workspace() {
                 <div className="space-y-6 animate-in fade-in duration-200">
                   
                   {/* e-Leave Portal Integration Header */}
-                  <div className="relative overflow-hidden bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-background border border-purple-500/20 p-6 rounded-3xl shadow-lg flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+                  <div className="relative overflow-hidden bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-background border border-purple-500/20 p-6 rounded-2xl shadow-lg flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[60px] pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] pointer-events-none" />
                     
                     <div className="flex items-center gap-3.5 z-10">
-                      <div className="w-12 h-12 rounded-3xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-purple-500/20 shrink-0">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-purple-500/20 shrink-0">
                         <Calendar className="w-6 h-6 text-white" />
                       </div>
                       <div>
@@ -1602,7 +1602,7 @@ export default function Workspace() {
                     </div>
                     
                     {/* Switcher Navigation */}
-                    <div className="flex flex-wrap gap-1 bg-muted/60 p-1.5 rounded-3xl border border-border/80 z-10 shrink-0 shadow-inner">
+                    <div className="flex flex-wrap gap-1 bg-muted/60 p-1.5 rounded-2xl border border-border/80 z-10 shrink-0 shadow-inner">
                       {[
                         { key: "dashboard", label: lang === "th" ? "ภาพรวม" : "Dashboard" },
                         { key: "form", label: lang === "th" ? "เขียนใบลา" : "Request Form" },
@@ -1632,7 +1632,7 @@ export default function Workspace() {
                   </div>
 
                   {/* Integrated View Render Area */}
-                  <div className="p-1 rounded-3xl border border-border/60 glass glass-card shadow-sm overflow-hidden">
+                  <div className="p-1 rounded-2xl border border-border/60 glass glass-card shadow-sm overflow-hidden">
                     {eleaveSubTab === "dashboard" && <DashboardPage />}
                     {eleaveSubTab === "form" && <RequestLeavePage />}
                     {eleaveSubTab === "history" && <HistoryPage />}
@@ -1649,7 +1649,7 @@ export default function Workspace() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
                   
                   {/* Documents List */}
-                  <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card space-y-4">
+                  <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4">
                     <h3 className="text-sm font-bold text-foreground">ทะเบียนหนังสือสารบรรณและบันทึกข้อความภายใน</h3>
                     <div className="space-y-3">
                       {[
@@ -1678,7 +1678,7 @@ export default function Workspace() {
                   </div>
 
                   {/* E-Signature Simulator pad */}
-                  <div className="p-6 rounded-3xl glass glass-card space-y-4 h-fit">
+                  <div className="p-6 rounded-2xl glass glass-card space-y-4 h-fit">
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
                       <Edit3 className="w-4 h-4 text-primary" />
                       ลงนามดิจิทัล (E-Signature Pad)
@@ -1694,7 +1694,7 @@ export default function Workspace() {
                           ✍ คลิกค้างลากเพื่อจำลองเซ็นลายมือชื่อ
                         </span>
                         {/* Interactive fake sign visualization */}
-                        <div className="absolute inset-0 bg-transparent flex items-center justify-center font-serif text-3xl font-bold tracking-widest text-primary/30 pointer-events-none uppercase">
+                        <div className="absolute inset-0 bg-transparent flex items-center justify-center font-serif text-2xl font-bold tracking-widest text-primary/30 pointer-events-none uppercase">
                           Anchalee.R
                         </div>
                       </div>
@@ -1717,7 +1717,7 @@ export default function Workspace() {
 
               {/* SubTab 3: Maintenance ICT */}
               {activeSubTab === "maintenance" && (
-                <div className="p-6 rounded-3xl glass glass-card space-y-4 animate-in fade-in duration-200">
+                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
                   <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
                     <Hammer className="w-4 h-4 text-amber-500" />
                     แจ้งซ่อมบำรุงและครุภัณฑ์คอมพิวเตอร์ / ICT
@@ -1797,7 +1797,7 @@ export default function Workspace() {
               {activeSubTab === "line" && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
                   {/* Message Creator */}
-                  <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card space-y-4 h-fit">
+                  <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4 h-fit">
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
                       <Send className="w-4 h-4 text-emerald-500" />
                       ระบบส่งข้อความแจ้งเตือนหาผู้ปกครอง (LINE official)
@@ -1838,7 +1838,7 @@ export default function Workspace() {
                   </div>
 
                   {/* LINE API Node details status */}
-                  <div className="p-6 rounded-3xl glass glass-card space-y-4">
+                  <div className="p-6 rounded-2xl glass glass-card space-y-4">
                     <h3 className="text-sm font-bold text-foreground">สถานะระบบส่งข้อความ (LINE Node)</h3>
                     <div className="p-4 rounded-xl border border-border bg-card space-y-3 text-xs">
                       <div className="flex justify-between items-center">
@@ -1860,7 +1860,7 @@ export default function Workspace() {
 
               {/* SubTab 2: Surveys */}
               {activeSubTab === "surveys" && (
-                <div className="p-6 rounded-3xl glass glass-card space-y-4 animate-in fade-in duration-200">
+                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
                   <h3 className="text-sm font-bold text-foreground">สร้างและออกแบบประเมินกิจกรรมภายในสถานศึกษา (Surveys)</h3>
                   <div className="p-4 rounded-xl border border-border bg-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
@@ -1910,7 +1910,7 @@ export default function Workspace() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
                   
                   {/* Risk list */}
-                  <div className="lg:col-span-2 p-6 rounded-3xl glass glass-card space-y-4">
+                  <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4">
                     <h3 className="text-sm font-bold text-foreground">นักเรียนที่ประเมินพฤติกรรมมีความเสี่ยง (AI Insights Flagged)</h3>
                     <div className="space-y-3">
                       {students.filter(s => s.status !== "ปกติ").map((student) => (
@@ -1938,7 +1938,7 @@ export default function Workspace() {
                   </div>
 
                   {/* AI insights analysis card */}
-                  <div className="p-6 rounded-3xl glass glass-card space-y-4">
+                  <div className="p-6 rounded-2xl glass glass-card space-y-4">
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-primary" />
                       AI Insight Assistant
@@ -1965,7 +1965,7 @@ export default function Workspace() {
 
               {/* SubTab 2: GPA Recharts placeholder */}
               {activeSubTab === "kpi" && (
-                <div className="p-6 rounded-3xl glass glass-card space-y-4 animate-in fade-in duration-200">
+                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
                   <h3 className="text-sm font-bold text-foreground">สถิติอัตราการมาเรียนในรอบสัปดาห์ (Attendance Rate Visual)</h3>
                   {/* Stunning animated SVG chart representing academic days */}
                   <div className="h-64 rounded-xl border border-border bg-card flex flex-col justify-end p-4 relative overflow-hidden">
@@ -2019,7 +2019,7 @@ export default function Workspace() {
 
               {/* SubTab 1: Rule Engine setting */}
               {activeSubTab === "rules" && (
-                <div className="p-6 rounded-3xl glass glass-card space-y-4 animate-in fade-in duration-200">
+                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
                   <div>
                     <h3 className="text-sm font-bold text-foreground">ตั้งค่าการทำงานอัตโนมัติ (Rule Engine Node Builder)</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">เปิด-ปิดเงื่อนไขการทำงานอัตโนมัติเมื่อเกิดกิจกรรมพฤติกรรมในโรงเรียน</p>
@@ -2069,7 +2069,7 @@ export default function Workspace() {
 
               {/* SubTab 2: Logs list */}
               {activeSubTab === "logs" && (
-                <div className="p-6 rounded-3xl glass glass-card space-y-4 animate-in fade-in duration-200">
+                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
                   <h3 className="text-sm font-bold text-foreground">สมุดบันทึกประวัติความปลอดภัยและการจัดการฐานข้อมูล (Audit Log Core)</h3>
                   <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
                     {auditLogs.map((log) => (
@@ -2151,7 +2151,7 @@ export default function Workspace() {
 
       {/* LINE Simulator Notification Toast popup */}
       {showLineAlert && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 p-4 rounded-3xl glass shadow-2xl border border-emerald-500/30 animate-in fade-in slide-in-from-bottom duration-300 bg-emerald-50/95 dark:bg-emerald-950/90 text-emerald-950 dark:text-emerald-50">
+        <div className="fixed bottom-6 right-6 z-50 w-80 p-4 rounded-2xl glass shadow-2xl border border-emerald-500/30 animate-in fade-in slide-in-from-bottom duration-300 bg-emerald-50/95 dark:bg-emerald-950/90 text-emerald-950 dark:text-emerald-50">
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />

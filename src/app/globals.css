@@ -9,7 +9,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: 'Inter', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: 'Poppins', 'Noto Sans Thai', sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: 'Poppins', 'Noto Sans Thai', sans-serif;
 
@@ -169,12 +169,12 @@
 }
 
 .font-th {
-  font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+  font-family: 'Poppins', 'Noto Sans Thai', sans-serif;
   letter-spacing: 0.2px;
 }
 
 .font-en {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Poppins', sans-serif;
   letter-spacing: -0.2px;
 }
 

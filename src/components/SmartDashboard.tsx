@@ -43,36 +43,50 @@ export default function SmartDashboard({
       {/* Overview stats - Combined Split Hero Banner Card matching mockup */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        {/* Combined Split Hero Card (span 2 cols) */}
-        <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col sm:flex-row justify-between items-stretch gap-6 transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800">
-          {/* Left section: Huge statistic */}
-          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
-            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
-              {lang === "th" ? "คาบสอนวันนี้" : "Teaching Periods Today"}
+        {/* Combined Split Hero Card (span 2 cols) - Predictive UX */}
+        <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col sm:flex-row justify-between items-stretch gap-6 transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800 relative overflow-hidden">
+          {/* Subtle background glow for predictive importance */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/5 rounded-full blur-3xl pointer-events-none" />
+          
+          {/* Left section: Current Period */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px] relative z-10">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              {lang === "th" ? "คาบสอนปัจจุบัน" : "Current Period"}
             </span>
-            <div className="mt-auto">
-              <p className="text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-none">4 คาบ</p>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold block mt-3">
-                {lang === "th" ? "อัพเดทตารางสอนล่าสุด" : "Last updated today"}
+            <div className="mt-auto pt-4">
+              <p className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-none">คาบที่ 1</p>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold flex items-center gap-1 mt-3">
+                <Clock className="w-3.5 h-3.5" />
+                {lang === "th" ? "08:30 - 09:30 น." : "08:30 - 09:30 AM"}
               </span>
             </div>
           </div>
 
           {/* Vertical Divider Hairline */}
-          <div className="hidden sm:block w-px bg-slate-100 dark:bg-slate-900" />
+          <div className="hidden sm:block w-px bg-slate-100 dark:bg-slate-900 relative z-10" />
 
-          {/* Right section: Detail metrics */}
-          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
-            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
-              {lang === "th" ? "ชั้นเรียนหลักรับผิดชอบ" : "Primary Academic Class"}
+          {/* Right section: Detail metrics & Action */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px] relative z-10">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block mb-2">
+              {lang === "th" ? "วิชา และ ห้องเรียน" : "Subject & Classroom"}
             </span>
-            <div className="mt-auto">
-              <p className="text-sm font-extrabold text-[#2d2d2d] dark:text-amber-400 leading-tight">
-                {lang === "th" ? "วิชา: ภาษาไทยพื้นฐาน" : "Subject: Basic Thai Literature"}
-              </p>
-              <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold block mt-2 leading-relaxed">
-                {lang === "th" ? "ม.6/1 (คาบที่ 1-2 ในอาคารเรียน 3)" : "Grade 12/1 (Period 1-2 • Building 3)"}
-              </span>
+            <div className="mt-auto space-y-3">
+              <div>
+                <p className="text-sm font-extrabold text-[#2d2d2d] dark:text-amber-400 leading-tight">
+                  {lang === "th" ? "ภาษาไทยพื้นฐาน ม.6/1" : "Basic Thai Grade 12/1"}
+                </p>
+                <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold block mt-1 leading-relaxed">
+                  {lang === "th" ? "อาคาร 3 ห้อง 301" : "Building 3 Room 301"}
+                </span>
+              </div>
+              <button 
+                onClick={() => onNavigate("Academic", "attendance")}
+                className="w-full py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 font-bold text-xs rounded-xl shadow-premium hover:shadow-[0_8px_30px_rgba(245,197,66,0.3)] hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-1.5 border border-white/20 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" />
+                {lang === "th" ? "ไปหน้าเช็คชื่อนักเรียน" : "Go to Attendance"}
+              </button>
             </div>
           </div>
         </div>

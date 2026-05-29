@@ -458,10 +458,10 @@ export default function SettingsPage() {
           </div>
 
           {/* Leave Rules Editor */}
-          <form onSubmit={handleSaveLeaveRules} className="bg-white dark:bg-gray-900 rounded-2xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-amber-100 dark:border-amber-900/30 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-bl-[100px] -z-10" />
+          <form onSubmit={handleSaveLeaveRules} className="bg-white dark:bg-gray-900 rounded-2xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-primary/20 dark:border-primary/30 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-bl-[100px] -z-10" />
             <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-amber-500" />
+              <ShieldAlert className="w-5 h-5 text-primary" />
               {t("leaveRulesDisplay")}
             </h3>
             <p className="text-xs text-gray-500 mb-4">
@@ -471,7 +471,7 @@ export default function SettingsPage() {
               rows={5}
               value={leaveRules}
               onChange={(e) => setLeaveRules(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-y"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y"
               placeholder="การลากิจต้องยื่นคำขอล่วงหน้าอย่างน้อย 3 วันทำการ&#10;การลาป่วยติดต่อกันเกิน 3 วัน ต้องแนบใบรับรองแพทย์"
             />
             <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -479,7 +479,7 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={isSavingRules}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-md shadow-amber-500/10 focus:ring-4 focus:ring-amber-500/20 transition-all text-sm disabled:opacity-50 shrink-0 self-end"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold shadow-md shadow-primary/10 focus:ring-4 focus:ring-primary/20 transition-all text-sm disabled:opacity-50 shrink-0 self-end"
               >
                 <Save className="w-4 h-4" />
                 {isSavingRules ? t("saving") : (lang === "en" ? "Save Rules Text" : "บันทึกข้อความแสดงผล")}

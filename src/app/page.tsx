@@ -6,7 +6,7 @@ import {
   Search, Moon, Sun, Bell, AlertTriangle, Plus, CheckCircle2, X, Trash2, 
   Send, Hammer, HelpCircle, FileText, Calendar, Clock, Star, Edit3, ArrowRight,
   UserCheck, Sparkles, LogOut, CheckSquare, Award, Play, ChevronRight, FileCode, GraduationCap,
-  Menu
+  Menu, LayoutDashboard, History, FileSpreadsheet, Activity, UserCircle, ChevronDown
 } from "lucide-react";
 
 import { Student, Teacher, LeaveRequest, HealthVisit, TimelineEvent, NotificationItem, AuditLogItem, UserRole } from "@/types/school-os";
@@ -26,6 +26,9 @@ import HistoryPage from "./eleave/history/page";
 import ApprovalsPage from "./eleave/approvals/page";
 import ReportsPage from "./eleave/reports/page";
 import SettingsPage from "./eleave/settings/page";
+import UsersLeavePage from "./eleave/users/page";
+import LogsLeavePage from "./eleave/logs/page";
+import ProfilePage from "./eleave/profile/page";
 import { ScheduleGrid } from "@/components/timetable/ScheduleGrid";
 import SubstitutionTab from "@/components/timetable/SubstitutionTab";
 
@@ -49,6 +52,31 @@ export default function Workspace() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [eleaveSubTab, setEleaveSubTab] = useState<"dashboard" | "form" | "history" | "approvals" | "reports" | "settings">("dashboard");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [eleaveExpanded, setEleaveExpanded] = useState(false);
+
+  // Redirect to login if session is null
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.push("/login");
+    }
+  }, [session, isPending, router]);
+
+  // Sync active view from URL search query on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const menu = params.get("menu");
+      const tab = params.get("tab");
+      if (menu) {
+        setActiveMenu(menu);
+        if (menu === "eleave" && tab) {
+          setEleaveSubTab(tab as any);
+          setEleaveExpanded(true);
+        }
+      }
+    }
+  }, []);
 
   // Core Data States
   const [students, setStudents] = useState<Student[]>(initialStudents);
@@ -191,7 +219,7 @@ export default function Workspace() {
         setRole("teacher");
       }
     }
-  }, [activeSession]);
+  }, [activeSession?.user?.id, activeSession?.user?.role, activeSession?.user?.position]);
 
   // Forms / Operations States
   const [showToast, setShowToast] = useState(false);
@@ -494,6 +522,9 @@ export default function Workspace() {
     { name: "Academic", icon: BookOpen, label: lang === "th" ? "วิชาการ" : "Academics" },
     { name: "Operations", icon: Settings, label: lang === "th" ? "ดำเนินงาน" : "Operations" },
     { name: "Engagement", icon: MessageSquare, label: lang === "th" ? "สื่อสาร" : "Engagement" },
+    { name: "Reports", icon: FileText, label: lang === "th" ? "รายงาน" : "Reports" },
+    { name: "eleave", icon: FileText, label: lang === "th" ? "ระบบการลา (e-Leave)" : "e-Leave System", isExpandable: true },
+    { name: "Profile", icon: UserCircle, label: lang === "th" ? "โปรไฟล์ของฉัน" : "My Profile" },
   ];
   const sidebarAdminItems = [
     { name: "Analytics", icon: BarChart3, label: lang === "th" ? "วิเคราะห์ & AI" : "AI Analytics" },
@@ -501,27 +532,118 @@ export default function Workspace() {
   ];
   const isApprover = role === "admin" || role === "director";
 
+  if (isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F4F7FB] dark:bg-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20 animate-pulse">
+            <GraduationCap className="w-6 h-6 text-white" />
+          </div>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
+        </div>
+      </div>
+    );
+  }
 
+  if (!session) {
+    return null;
+  }
 
   return (
-    <div className={`flex-1 flex overflow-hidden min-h-screen bg-warm-gradient relative text-foreground ${lang === 'th' ? 'font-th' : 'font-en'}`}>
+    <div className={`flex-1 flex overflow-hidden min-h-screen bg-background relative text-foreground ${lang === 'th' ? 'font-th' : 'font-en'}`}>
       
-      {/* 🚀 SIDEBAR PRINCIPAL - SLEEK VERTICAL ICON BAR */}
-      <aside className="hidden md:flex flex-col w-22 glass-premium shadow-premium items-center py-8 justify-between z-20 shrink-0 relative" style={{ borderRight: '1px solid rgba(255,255,255,0.4)' }}>
-        
-        {/* Brand Profile Element */}
-        <div className="flex flex-col items-center gap-6 w-full">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-md shadow-amber-500/20 cursor-pointer hover:scale-105 transition-transform" title="School OS - โรงเรียนคุชปะชาสรรค์">
-            <GraduationCap className="w-5 h-5 text-white" />
+      {/* 🚀 COLLAPSIBLE DESKTOP SIDEBAR */}
+      <aside 
+        className={`hidden md:flex flex-col h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 transition-all duration-300 z-20 shrink-0 relative shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${
+          sidebarOpen ? "w-64 px-4 py-6" : "w-0 opacity-0 overflow-hidden border-r-0"
+        }`}
+      >
+        {/* Brand / Logo */}
+        {sidebarOpen && (
+          <div className="h-16 px-4 flex items-center gap-3 mb-6 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md shadow-primary/20">
+              <GraduationCap className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="font-extrabold text-sm text-slate-900 dark:text-white leading-none block">SchoolOS Portal</span>
+              <span className="text-[10px] text-slate-400 font-semibold mt-1 block">โรงเรียนคุชปะชาสรรค์</span>
+            </div>
           </div>
+        )}
 
-          <div className="w-10 h-px bg-slate-100 dark:bg-slate-900" />
-          
-          {/* Centered Navigation Links */}
-          <nav className="flex flex-col items-center gap-4 w-full px-2">
+        {/* Scrollable Navigation Area */}
+        {sidebarOpen && (
+          <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pr-1">
+            <p className="px-4 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              {lang === "th" ? "เมนูหลัก" : "Main Menu"}
+            </p>
+            
             {sidebarMainItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeMenu === item.name;
+              
+              if (item.isExpandable) {
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => setEleaveExpanded(prev => !prev)}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-[14px] font-semibold transition-all group ${
+                        isActive || activeMenu === "eleave"
+                          ? "bg-primary/10 text-primary"
+                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4.5 h-4.5" />
+                        <span>{item.label}</span>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${eleaveExpanded ? "rotate-180" : ""}`} />
+                    </button>
+                    
+                    {/* Nested Submenu */}
+                    {eleaveExpanded && (
+                      <div className="pl-6 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                        {[
+                          { key: "dashboard", label: lang === "th" ? "ภาพรวม" : "Dashboard", icon: LayoutDashboard },
+                          { key: "form", label: lang === "th" ? "เขียนใบลา" : "Request Leave", icon: FileText },
+                          { key: "history", label: lang === "th" ? "ประวัติการลา" : "History", icon: History },
+                          ...(isApprover ? [{ key: "approvals", label: lang === "th" ? "รออนุมัติ" : "Approvals", icon: CheckSquare }] : []),
+                          ...(role === "admin" ? [
+                            { key: "users", label: lang === "th" ? "รายชื่อผู้ใช้" : "Users", icon: Users },
+                            { key: "logs", label: lang === "th" ? "ประวัติการใช้งาน" : "Logs", icon: Activity },
+                            { key: "reports", label: lang === "th" ? "ออกรายงาน" : "Reports", icon: FileSpreadsheet },
+                            { key: "settings", label: lang === "th" ? "ตั้งค่าระบบ" : "Settings", icon: Settings }
+                          ] : [])
+                        ].map((sub) => {
+                          const isSubActive = activeMenu === "eleave" && eleaveSubTab === sub.key;
+                          const SubIcon = sub.icon;
+                          return (
+                            <button
+                              key={sub.key}
+                              type="button"
+                              onClick={() => {
+                                setActiveMenu("eleave");
+                                setEleaveSubTab(sub.key as any);
+                                addAuditLog("SIDEBAR_CLICK", `คลิกเมนูย่อย e-Leave: ${sub.label}`);
+                              }}
+                              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${
+                                isSubActive
+                                  ? "text-primary bg-primary/5 font-semibold"
+                                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                              }`}
+                            >
+                              <SubIcon className="w-4 h-4 shrink-0" />
+                              <span>{sub.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <button
                   key={item.name}
@@ -531,92 +653,88 @@ export default function Workspace() {
                     if (item.name === "Home") setActiveSubTab("dashboard");
                     else if (item.name === "People") setActiveSubTab("students");
                     else if (item.name === "Academic") setActiveSubTab("attendance");
-                    else if (item.name === "Operations") setActiveSubTab("requests");
                     else if (item.name === "Engagement") setActiveSubTab("line");
+                    else if (item.name === "Reports") setActiveSubTab("default");
                     addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
                   }}
-                  className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 relative group cursor-pointer hover:scale-[1.05] ${
-                    isActive 
-                      ? "bg-[#2d2d2d] text-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] dark:bg-amber-500 dark:text-[#2d2d2d]" 
-                      : "text-[#6b6b6b] hover:text-[#1e1e1e] dark:text-slate-400 dark:hover:text-white hover:bg-amber-500/10"
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[14px] font-semibold transition-all group ${
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  {/* Tooltip */}
-                  <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-850 text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg border border-slate-800 dark:border-slate-700">
-                    {item.label}
-                  </div>
+                  <Icon className="w-4.5 h-4.5 group-hover:scale-105 transition-transform" />
+                  <span>{item.label}</span>
                 </button>
               );
             })}
 
-            <div className="w-10 h-px bg-slate-100 dark:bg-slate-900 my-1" />
-
-            {sidebarAdminItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeMenu === item.name;
-              return (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() => {
-                    setActiveMenu(item.name);
-                    if (item.name === "Analytics") setActiveSubTab("risk");
-                    else if (item.name === "Admin") setActiveSubTab("rules");
-                    addAuditLog("SIDEBAR_CLICK", `คลิกเมนูแอดมิน: ${item.name}`);
-                  }}
-                  className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 relative group cursor-pointer hover:scale-[1.05] ${
-                    isActive 
-                      ? "bg-primary text-primary-foreground shadow-premium" 
-                      : "text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-900/50"
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  {/* Tooltip */}
-                  <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-850 text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg border border-slate-800 dark:border-slate-700">
-                    {item.label}
-                  </div>
-                </button>
-              );
-            })}
-
-            <a
-              href="/eleave"
-              className="w-12 h-12 flex items-center justify-center rounded-2xl text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 hover:scale-[1.05] transition-all group relative"
-            >
-              <FileText className="w-5 h-5" />
-              <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-[#2d2d2d] text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                {lang === "th" ? "โปรไฟล์และใบลา" : "Leave & Profile"}
-              </div>
-            </a>
+            {/* Admin Modules block */}
+            <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80">
+              <p className="px-4 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                {lang === "th" ? "โมดูลผู้ดูแลระบบ" : "Admin Modules"}
+              </p>
+              {sidebarAdminItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeMenu === item.name;
+                return (
+                  <button
+                    key={item.name}
+                    type="button"
+                    onClick={() => {
+                      setActiveMenu(item.name);
+                      if (item.name === "Analytics") setActiveSubTab("risk");
+                      else if (item.name === "Admin") setActiveSubTab("rules");
+                      addAuditLog("SIDEBAR_CLICK", `คลิกเมนูแอดมิน: ${item.name}`);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[14px] font-semibold transition-all group ${
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Icon className="w-4.5 h-4.5 group-hover:scale-105 transition-transform" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </nav>
-        </div>
+        )}
 
-        {/* User Account / Sign Out Section */}
-        <div className="flex flex-col items-center gap-4 w-full">
-          <div className="w-9 h-9 rounded-full border-2 border-amber-200 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold text-xs flex items-center justify-center shrink-0 cursor-pointer shadow-sm hover:scale-105 transition-all group relative">
-            {activeSession.user.name ? activeSession.user.name.charAt(0).toUpperCase() : "U"}
-            <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-850 text-white text-[10px] font-semibold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg leading-tight">
-              {activeSession.user.name}
-              <span className="block text-[8px] text-slate-400 dark:text-slate-500 font-medium capitalize mt-0.5">
-                {role === "admin" ? (lang === "th" ? "แอดมิน" : "Admin") : role === "director" ? (lang === "th" ? "ผู้บริหาร" : "Executive") : (lang === "th" ? "อาจารย์" : "Teacher")}
-              </span>
+        {/* Footer Area with User Avatar & Logout */}
+        {sidebarOpen && activeSession?.user && (
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 shrink-0 space-y-3">
+            <div className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50">
+              <div 
+                onClick={() => {
+                  setActiveMenu("Profile");
+                  addAuditLog("SIDEBAR_CLICK", "คลิกโปรไฟล์จากแถบผู้ใช้");
+                }}
+                className="w-9 h-9 rounded-full border-2 border-primary/20 bg-primary/10 text-primary font-bold text-xs flex items-center justify-center cursor-pointer shadow-sm hover:scale-105 transition-all"
+              >
+                {activeSession.user.name ? activeSession.user.name.charAt(0).toUpperCase() : "U"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{activeSession.user.name}</p>
+                <p className="text-[10px] text-slate-400 font-semibold capitalize truncate">
+                  {role === "admin" ? (lang === "th" ? "แอดมิน" : "Admin") : role === "director" ? (lang === "th" ? "ผู้บริหาร" : "Executive") : (lang === "th" ? "อาจารย์" : "Teacher")}
+                </p>
+              </div>
             </div>
+            
+            <button
+              onClick={async () => {
+                await signOut();
+                router.push("/login");
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white dark:hover:bg-rose-500/20 text-xs font-bold transition-all cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{lang === "th" ? "ออกจากระบบ" : "Sign Out"}</span>
+            </button>
           </div>
-          
-          <button
-            onClick={async () => {
-              await signOut();
-              router.push("/login");
-            }}
-            className="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:scale-[1.05] transition-all cursor-pointer group relative"
-          >
-            <LogOut className="w-5 h-5" />
-            <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-rose-650 text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-              {lang === "th" ? "ออกจากระบบ" : "Sign Out"}
-            </div>
-          </button>
-        </div>
+        )}
       </aside>
 
       {/* 🚀 MAIN CONTENT CONTAINER */}
@@ -629,9 +747,15 @@ export default function Workspace() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              className="md:hidden p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-500 hover:text-foreground transition-all cursor-pointer flex items-center justify-center"
-              title="เปิดเมนูด้านข้าง"
+              onClick={() => {
+                if (typeof window !== "undefined" && window.innerWidth < 768) {
+                  setMobileSidebarOpen(prev => !prev);
+                } else {
+                  setSidebarOpen(prev => !prev);
+                }
+              }}
+              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-500 hover:text-foreground transition-all cursor-pointer flex items-center justify-center"
+              title="เปิด/ปิดเมนูด้านข้าง"
             >
               <Menu className="w-4 h-4" />
             </button>
@@ -724,18 +848,18 @@ export default function Workspace() {
           {/* ==================== 1. HOME VIEW ==================== */}
           {activeMenu === "Home" && (
             <div className="space-y-4">
-              <div className="profile-card-warm p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="glass-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="relative z-10">
-                  <h2 className="text-base font-bold text-[#1e1e1e] flex items-center gap-1.5">
-                    <Sparkles className="w-5 h-5 text-amber-600" />
+                  <h2 className="text-base font-bold text-foreground flex items-center gap-1.5">
+                    <Sparkles className="w-5 h-5 text-primary" />
                     สวัสดีครับ, ยินดีต้อนรับกลับสู่ระบบ School OS
                   </h2>
-                  <p className="text-xs text-[#6b6b6b] mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     ระบบวิเคราะห์อัจฉริยะประมวลผลข้อมูลล่าสุดเมื่อ: <span className="font-semibold" suppressHydrationWarning>{new Date().toLocaleTimeString()}</span> ของวันนี้
                   </p>
                 </div>
                 <div className="flex items-center gap-2 relative z-10">
-                  <span className="stat-pill stat-pill-dark capitalize">
+                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20 capitalize">
                     Role: {role}
                   </span>
                 </div>
@@ -766,7 +890,7 @@ export default function Workspace() {
                 <button 
                   onClick={() => setActiveSubTab("students")}
                   className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "students" ? "border-[#2d2d2d] dark:border-amber-400 text-[#1e1e1e] dark:text-amber-400" : "border-transparent text-muted-foreground"
+                    activeSubTab === "students" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
                   }`}
                 >
                   ฐานข้อมูลนักเรียน (Students)
@@ -774,7 +898,7 @@ export default function Workspace() {
                 <button 
                   onClick={() => setActiveSubTab("teachers")}
                   className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "teachers" ? "border-[#2d2d2d] dark:border-amber-400 text-[#1e1e1e] dark:text-amber-400" : "border-transparent text-muted-foreground"
+                    activeSubTab === "teachers" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
                   }`}
                 >
                   รายชื่อครูและบุคลากร (Teachers)
@@ -782,7 +906,7 @@ export default function Workspace() {
                 <button 
                   onClick={() => setActiveSubTab("health")}
                   className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "health" ? "border-[#2d2d2d] dark:border-amber-400 text-[#1e1e1e] dark:text-amber-400" : "border-transparent text-muted-foreground"
+                    activeSubTab === "health" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
                   }`}
                 >
                   ห้องพยาบาลโรงเรียน (Health Center)
@@ -810,7 +934,7 @@ export default function Workspace() {
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 font-bold flex items-center justify-center shadow-sm select-none">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shadow-sm select-none">
                               {student.nickname || student.fullName.trim().charAt(0)}
                             </div>
                             <div>
@@ -1562,14 +1686,6 @@ export default function Workspace() {
             <div className="space-y-4">
               <div className="flex border-b border-border/80">
                 <button 
-                  onClick={() => setActiveSubTab("requests")}
-                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "requests" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
-                  }`}
-                >
-                  ยื่นใบลา & ขอใช้ทรัพยากร (Workflow Requests)
-                </button>
-                <button 
                   onClick={() => setActiveSubTab("documents")}
                   className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
                     activeSubTab === "documents" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
@@ -1586,80 +1702,6 @@ export default function Workspace() {
                   แจ้งซ่อม & อุปกรณ์ ICT (Maintenance)
                 </button>
               </div>
-
-              {/* SubTab 1: Requests & Workflows */}
-              {activeSubTab === "requests" && (
-                <div className="space-y-6 animate-in fade-in duration-200">
-                  
-                  {/* e-Leave Portal Integration Header */}
-                  <div className="relative overflow-hidden bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-background border border-purple-500/20 p-6 rounded-2xl shadow-lg flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[60px] pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] pointer-events-none" />
-                    
-                    <div className="flex items-center gap-3.5 z-10">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-purple-500/20 shrink-0">
-                        <Calendar className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-sm md:text-base text-foreground bg-gradient-to-r from-purple-400 to-indigo-300 bg-clip-text text-transparent">
-                            {lang === "th" ? "ระบบการลาออนไลน์อัจฉริยะ (e-Leave Portal)" : "Intelligent e-Leave Portal"}
-                          </h3>
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest animate-pulse">
-                            {lang === "th" ? "ใช้งานอยู่" : "Active"}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground mt-1 max-w-xl font-medium">
-                          {lang === "th" 
-                            ? "ยื่นคำขอลา ตรวจสอบสถิติสิทธิ์โควตาคงเหลือ และพิจารณาอนุมัติคำขอภายในสายงานด้วยข้อมูลเชื่อมโยงสมบูรณ์แบบ"
-                            : "Submit leave requests, monitor quota balances, and execute workflow approvals dynamically using unified session security."
-                          }
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Switcher Navigation */}
-                    <div className="flex flex-wrap gap-1 bg-muted/60 p-1.5 rounded-2xl border border-border/80 z-10 shrink-0 shadow-inner">
-                      {[
-                        { key: "dashboard", label: lang === "th" ? "ภาพรวม" : "Dashboard" },
-                        { key: "form", label: lang === "th" ? "เขียนใบลา" : "Request Form" },
-                        { key: "history", label: lang === "th" ? "ประวัติการลา" : "My History" },
-                        ...(isApprover ? [{ key: "approvals", label: lang === "th" ? "รออนุมัติ" : "Approvals" }] : []),
-                        ...(role === "admin" ? [
-                          { key: "reports", label: lang === "th" ? "ออกรายงาน" : "Reports" },
-                          { key: "settings", label: lang === "th" ? "ตั้งค่าระบบ" : "Settings" }
-                        ] : [])
-                      ].map((tab) => (
-                        <button
-                          key={tab.key}
-                          onClick={() => {
-                            setEleaveSubTab(tab.key as any);
-                            addAuditLog("ELEAVE_TAB_CLICK", `สลับแท็บยื่นลาเป็น: ${tab.key}`);
-                          }}
-                          className={`px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all ${
-                            eleaveSubTab === tab.key 
-                              ? "bg-purple-600 text-white shadow-md shadow-purple-500/25 scale-[1.03]" 
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Integrated View Render Area */}
-                  <div className="p-1 rounded-2xl border border-border/60 glass glass-card shadow-sm overflow-hidden">
-                    {eleaveSubTab === "dashboard" && <DashboardPage />}
-                    {eleaveSubTab === "form" && <RequestLeavePage />}
-                    {eleaveSubTab === "history" && <HistoryPage />}
-                    {eleaveSubTab === "approvals" && <ApprovalsPage />}
-                    {eleaveSubTab === "reports" && <ReportsPage />}
-                    {eleaveSubTab === "settings" && <SettingsPage />}
-                  </div>
-
-                </div>
-              )}
 
               {/* SubTab 2: E-Signature Memo / Documents */}
               {activeSubTab === "documents" && (
@@ -2105,6 +2147,76 @@ export default function Workspace() {
                 </div>
               )}
 
+            </div>
+          )}
+
+          {/* ==================== 9. E-LEAVE PORTAL ==================== */}
+          {activeMenu === "eleave" && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between border-b border-border/80 pb-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <h3 className="font-bold text-sm md:text-base text-foreground">
+                    {lang === "th" ? "ระบบการลาออนไลน์ (e-Leave Portal)" : "e-Leave Online Portal"}
+                  </h3>
+                </div>
+                {/* Switcher Navigation */}
+                <div className="flex flex-wrap gap-1 bg-muted/60 p-1 rounded-xl border border-border/80">
+                  {[
+                    { key: "dashboard", label: lang === "th" ? "ภาพรวม" : "Dashboard" },
+                    { key: "form", label: lang === "th" ? "เขียนใบลา" : "Request" },
+                    { key: "history", label: lang === "th" ? "ประวัติ" : "History" },
+                    ...(isApprover ? [{ key: "approvals", label: lang === "th" ? "รออนุมัติ" : "Approvals" }] : []),
+                    ...(role === "admin" ? [
+                      { key: "users", label: lang === "th" ? "ผู้ใช้" : "Users" },
+                      { key: "logs", label: lang === "th" ? "ประวัติระบบ" : "Logs" },
+                      { key: "reports", label: lang === "th" ? "รายงาน" : "Reports" },
+                      { key: "settings", label: lang === "th" ? "ตั้งค่า" : "Settings" }
+                    ] : [])
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => {
+                        setEleaveSubTab(tab.key as any);
+                        addAuditLog("ELEAVE_TAB_CLICK", `สลับแท็บยื่นลาเป็น: ${tab.key}`);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+                        eleaveSubTab === tab.key 
+                          ? "bg-primary text-white shadow-sm" 
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-1 rounded-2xl border border-border/60 bg-card overflow-hidden">
+                {eleaveSubTab === "dashboard" && <DashboardPage />}
+                {eleaveSubTab === "form" && <RequestLeavePage />}
+                {eleaveSubTab === "history" && <HistoryPage />}
+                {eleaveSubTab === "approvals" && <ApprovalsPage />}
+                {eleaveSubTab === "users" && <UsersLeavePage />}
+                {eleaveSubTab === "logs" && <LogsLeavePage />}
+                {eleaveSubTab === "reports" && <ReportsPage />}
+                {eleaveSubTab === "settings" && <SettingsPage />}
+              </div>
+            </div>
+          )}
+
+          {/* ==================== 10. MY PROFILE ==================== */}
+          {activeMenu === "Profile" && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2 border-b border-border/80 pb-2">
+                <UserCircle className="w-5 h-5 text-primary" />
+                <h3 className="font-bold text-sm md:text-base text-foreground">
+                  {lang === "th" ? "โปรไฟล์ของฉัน" : "My Profile"}
+                </h3>
+              </div>
+              <div className="p-1 rounded-2xl border border-border/60 bg-card overflow-hidden">
+                <ProfilePage />
+              </div>
             </div>
           )}
 

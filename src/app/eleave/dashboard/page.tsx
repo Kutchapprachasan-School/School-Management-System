@@ -47,10 +47,15 @@ export default function DashboardPage() {
   const [leaderboardFilter, setLeaderboardFilter] = useState<"times" | "days">("times");
 
   useEffect(() => { 
+    if (!session) return;
     setMounted(true); 
     setStats(null);
-    getDashboardStats(cycleFilter, lang).then(setStats).catch(console.error);
-  }, [cycleFilter, lang]);
+    getDashboardStats(cycleFilter, lang)
+      .then(setStats)
+      .catch((err) => {
+        console.error("Failed to fetch dashboard stats:", err);
+      });
+  }, [cycleFilter, lang, session]);
 
   if (!mounted || !stats) {
     return (

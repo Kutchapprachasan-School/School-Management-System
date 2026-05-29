@@ -77,7 +77,7 @@ export default function LoginPage() {
         password,
         fetchOptions: {
           onSuccess: () => {
-            router.push("/dashboard");
+            router.push("/");
           },
           onError: (ctx: any) => {
             alert(ctx.error.message);
@@ -117,7 +117,7 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = (provider: "google" | "facebook" | "line") => {
-    signIn.social({ provider, callbackURL: "/dashboard" }).catch((e) => {
+    signIn.social({ provider, callbackURL: "/" }).catch((e) => {
       console.error(e);
       alert("ระบบล็อกอินด้วยโซเชียลยังไม่ถูกตั้งค่า API Keys ใน Better Auth ครับ");
     });

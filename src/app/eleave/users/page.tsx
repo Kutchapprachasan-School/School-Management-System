@@ -257,7 +257,7 @@ export default function UsersPage() {
                                   setResettingId(user.id);
                                   setNewPassword("");
                                 }}
-                                className="p-2 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                                className="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors"
                                 title="รีเซ็ตรหัสผ่าน"
                               >
                                 <Key className="w-4 h-4" />
@@ -346,7 +346,7 @@ export default function UsersPage() {
             className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl p-6"
           >
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Key className="w-5 h-5 text-amber-500" />
+              <Key className="w-5 h-5 text-primary" />
               รีเซ็ตรหัสผ่านผู้ใช้งาน
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -358,7 +358,7 @@ export default function UsersPage() {
               placeholder="รหัสผ่านใหม่"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full h-11 px-4 mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none transition-all"
+              className="w-full h-11 px-4 mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
               autoFocus
             />
 
@@ -390,7 +390,7 @@ export default function UsersPage() {
                       });
                   }
                 }}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-600 hover:opacity-95 text-white shadow-md shadow-amber-500/20 transition-all"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary hover:opacity-95 text-white shadow-md shadow-primary/20 transition-all"
               >
                 บันทึกรหัสผ่านใหม่
               </button>

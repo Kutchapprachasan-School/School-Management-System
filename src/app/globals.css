@@ -61,97 +61,97 @@
   /* ════════════════════════════════════════════
      Warm Organic Glassmorphism — School System v2
      ════════════════════════════════════════════ */
-  --background: #f4f2ee;
-  --foreground: #1e1e1e;
+  --background: #F4F7FB;
+  --foreground: #111827;
 
-  --card: rgba(255, 255, 255, 0.75);
-  --card-foreground: #1e1e1e;
+  --card: rgba(255, 255, 255, 0.85);
+  --card-foreground: #111827;
 
   --popover: #FFFFFF;
-  --popover-foreground: #1e1e1e;
+  --popover-foreground: #111827;
 
-  --primary: #2d2d2d;       /* Slate Charcoal — nav actives, CTAs */
+  --primary: #8B5CF6;       /* Purple */
   --primary-foreground: #FFFFFF;
 
-  --secondary: #334155;     /* Deeper slate for secondary elements */
-  --secondary-foreground: #FFFFFF;
+  --secondary: #F3F4F6;     /* Light Gray */
+  --secondary-foreground: #6B7280;
 
-  --muted: #f1f5f9;
-  --muted-foreground: #6b6b6b;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
 
-  --accent: #f5c542;        /* Honey Amber Gold — highlights, indicators */
-  --accent-foreground: #2d2d2d;
+  --accent: #38BDF8;        /* Cyan */
+  --accent-foreground: #FFFFFF;
 
-  --destructive: #EF4444;
+  --destructive: #FB7185;   /* Pink */
   --destructive-foreground: #FFFFFF;
 
-  --border: rgba(0, 0, 0, 0.06);
-  --input: #e2e8f0;
-  --ring: rgba(245, 197, 66, 0.3);
+  --border: rgba(0, 0, 0, 0.05);
+  --input: #E5E7EB;
+  --ring: rgba(139, 92, 246, 0.3);
 
-  /* Warm chart palette */
-  --chart-1: #2d2d2d;       /* Charcoal */
-  --chart-2: #f5c542;       /* Gold */
-  --chart-3: #10B981;       /* Emerald */
-  --chart-4: #3B82F6;       /* Blue */
-  --chart-5: #f97316;       /* Orange */
+  /* SaaS Chart palette */
+  --chart-1: #8B5CF6;       /* Purple */
+  --chart-2: #38BDF8;       /* Cyan */
+  --chart-3: #34D399;       /* Mint */
+  --chart-4: #FBBF24;       /* Orange */
+  --chart-5: #FB7185;       /* Pink */
 
-  --radius: 1rem;
+  --radius: 1.5rem;
 
-  --sidebar: rgba(255, 255, 255, 0.55);
-  --sidebar-foreground: #1e1e1e;
-  --sidebar-primary: #2d2d2d;
+  --sidebar: rgba(255, 255, 255, 0.65);
+  --sidebar-foreground: #6B7280;
+  --sidebar-primary: #8B5CF6;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: rgba(245, 197, 66, 0.15);
-  --sidebar-accent-foreground: #2d2d2d;
-  --sidebar-border: rgba(0, 0, 0, 0.06);
-  --sidebar-ring: rgba(245, 197, 66, 0.3);
+  --sidebar-accent: rgba(139, 92, 246, 0.08);
+  --sidebar-accent-foreground: #8B5CF6;
+  --sidebar-border: rgba(0, 0, 0, 0.05);
+  --sidebar-ring: rgba(139, 92, 246, 0.3);
 }
 
 .dark {
-  /* Dark Mode — warm charcoal variant */
-  --background: #111111;
+  /* Dark Mode — SaaS Dark variant */
+  --background: #0F172A;
   --foreground: #F8FAFC;
 
-  --card: rgba(30, 30, 30, 0.8);
+  --card: rgba(30, 41, 59, 0.7);
   --card-foreground: #F8FAFC;
 
-  --popover: #1a1a1a;
+  --popover: #1E293B;
   --popover-foreground: #F8FAFC;
 
-  --primary: #f5c542;       /* Gold becomes primary in dark */
-  --primary-foreground: #1e1e1e;
+  --primary: #8B5CF6;       /* Purple */
+  --primary-foreground: #FFFFFF;
 
-  --secondary: #94a3b8;
-  --secondary-foreground: #1e1e1e;
+  --secondary: #334155;
+  --secondary-foreground: #94A3B8;
 
   --muted: #1E293B;
   --muted-foreground: #94A3B8;
 
-  --accent: #f5c542;
-  --accent-foreground: #1e1e1e;
+  --accent: #38BDF8;
+  --accent-foreground: #FFFFFF;
 
-  --destructive: #EF4444;
+  --destructive: #FB7185;
   --destructive-foreground: #FFFFFF;
 
-  --border: rgba(255, 255, 255, 0.06);
-  --input: #2a2a2a;
-  --ring: rgba(245, 197, 66, 0.4);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: #334155;
+  --ring: rgba(139, 92, 246, 0.4);
 
-  --chart-1: #f5c542;
-  --chart-2: #3B82F6;
-  --chart-3: #10B981;
-  --chart-4: #94a3b8;
-  --chart-5: #f97316;
+  --chart-1: #A78BFA;
+  --chart-2: #7DD3FC;
+  --chart-3: #6EE7B7;
+  --chart-4: #FCD34D;
+  --chart-5: #FDA4AF;
 
-  --sidebar: rgba(20, 20, 20, 0.85);
-  --sidebar-foreground: #F8FAFC;
-  --sidebar-primary: #f5c542;
-  --sidebar-primary-foreground: #1e1e1e;
-  --sidebar-accent: rgba(245, 197, 66, 0.1);
-  --sidebar-accent-foreground: #f5c542;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: rgba(245, 197, 66, 0.4);
+  --sidebar: rgba(15, 23, 42, 0.85);
+  --sidebar-foreground: #94A3B8;
+  --sidebar-primary: #8B5CF6;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(139, 92, 246, 0.15);
+  --sidebar-accent-foreground: #A78BFA;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: rgba(139, 92, 246, 0.4);
 }
 
 @layer base {
@@ -203,51 +203,50 @@
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(12px) saturate(110%);
-  -webkit-backdrop-filter: blur(12px) saturate(110%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 1);
   border-radius: 1.5rem !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04) !important;
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02), inset 0 2px 4px rgba(255, 255, 255, 0.4) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 12px 32px rgba(139, 92, 246, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.5) !important;
   transform: translateY(-2px);
 }
 
 .dark .glass-card {
-  background: rgba(30, 30, 30, 0.75);
+  background: rgba(30, 41, 59, 0.65);
   backdrop-filter: blur(16px) saturate(130%);
   -webkit-backdrop-filter: blur(16px) saturate(130%);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 1.5rem !important;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.01),
-    0 4px 12px rgba(0, 0, 0, 0.2),
-    0 20px 48px rgba(0, 0, 0, 0.3) !important;
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 20px 48px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* Premium glass & shadow: kept for backward compat */
+/* Premium glass & shadow */
 .glass-premium {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px) saturate(120%);
   -webkit-backdrop-filter: blur(20px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 1);
 }
 
 .dark .glass-premium {
-  background: rgba(20, 20, 20, 0.75);
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(20px) saturate(130%);
   -webkit-backdrop-filter: blur(20px) saturate(130%);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .shadow-premium {
   box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.04),
-    0 10px 40px -10px rgba(0, 0, 0, 0.06);
+    0 4px 24px rgba(0, 0, 0, 0.03),
+    0 10px 40px -10px rgba(139, 92, 246, 0.05);
 }
 
 .dark .shadow-premium {
@@ -265,106 +264,10 @@
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-/* ════════════════════════════════════════════
-   Warm Background Gradient (from School System v2)
-   ════════════════════════════════════════════ */
-.bg-warm-gradient {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
-}
-
-.dark .bg-warm-gradient {
-  background: linear-gradient(135deg, #111111 0%, #171717 50%, #1a1a1a 100%);
-}
-
-/* Profile card warm sand style */
-.profile-card-warm {
-  background: linear-gradient(135deg, #e8dcc8 0%, #d4c8a8 100%);
-  border-radius: 1.5rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.profile-card-warm::before {
-  content: '';
-  position: absolute;
-  top: -30%;
-  right: -20%;
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(245, 197, 66, 0.3) 0%, transparent 70%);
-  border-radius: 50%;
-}
-
-.dark .profile-card-warm {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-}
-
-/* Stat pill styles from School System v2 */
-.stat-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 14px;
-  border-radius: 9999px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  gap: 6px;
-}
-
-.stat-pill-dark {
-  background: #2d2d2d;
-  color: #ffffff;
-}
-
-.stat-pill-gold {
-  background: #f5c542;
-  color: #2d2d2d;
-}
-
-.stat-pill-light {
-  background: rgba(255, 255, 255, 0.7);
-  color: #6b6b6b;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-/* Dark task card from School System v2 */
-.dark-task-card {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  border-radius: 2rem;
-  padding: 24px;
-  color: white;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-}
-
-/* Top nav pill links from School System v2 */
-.top-nav-link {
-  padding: 8px 16px;
-  border-radius: 9999px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: #6b6b6b;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  white-space: nowrap;
-  border: none;
-  background: none;
-}
-
-.top-nav-link:hover {
-  color: #1e1e1e;
-  background: rgba(245, 197, 66, 0.15);
-}
-
-.top-nav-link.active {
-  background: #2d2d2d;
-  color: #ffffff;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Custom Webkit scrollbar — warm tones */
+/* Custom Webkit scrollbar — Premium SaaS (Purple & Gray) */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -372,12 +275,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c4b89a;
-  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a89a7a;
+  background: rgba(139, 92, 246, 0.45);
 }
 
 /* Animations */

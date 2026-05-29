@@ -2278,6 +2278,56 @@ export default function Workspace() {
         </div>
       )}
 
+      {/* 📱 PERSISTENT MOBILE BOTTOM NAVBAR */}
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-900 flex items-center justify-around z-40 shadow-[0_-4px_16px_rgba(0,0,0,0.02)] md:hidden px-2">
+        {sidebarMainItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeMenu === item.name;
+          return (
+            <button
+              key={item.name}
+              type="button"
+              onClick={() => {
+                setActiveMenu(item.name);
+                if (item.name === "Home") setActiveSubTab("dashboard");
+                else if (item.name === "People") setActiveSubTab("students");
+                else if (item.name === "Academic") setActiveSubTab("attendance");
+                else if (item.name === "Operations") setActiveSubTab("requests");
+                else if (item.name === "Engagement") setActiveSubTab("line");
+                addAuditLog("MOBILE_NAVBAR_CLICK", `คลิกเมนูด้านล่าง: ${item.name}`);
+              }}
+              className={`flex flex-col items-center justify-center gap-1 w-14 h-full transition-all relative ${
+                isActive 
+                  ? "text-slate-900 dark:text-white" 
+                  : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-350"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="text-[9px] font-bold tracking-wide">{item.label}</span>
+              {isActive && (
+                <span className="absolute top-0 w-8 h-0.5 bg-slate-900 dark:bg-white rounded-full" />
+              )}
+            </button>
+          );
+        })}
+        {/* Sidebar Drawer trigger button */}
+        <button
+          type="button"
+          onClick={() => setMobileSidebarOpen(prev => !prev)}
+          className={`flex flex-col items-center justify-center gap-1 w-14 h-full transition-all relative ${
+            mobileSidebarOpen 
+              ? "text-slate-900 dark:text-white" 
+              : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-350"
+          }`}
+        >
+          <Menu className="w-5 h-5" />
+          <span className="text-[9px] font-bold tracking-wide">{lang === "th" ? "เมนูอื่น ๆ" : "More"}</span>
+          {mobileSidebarOpen && (
+            <span className="absolute top-0 w-8 h-0.5 bg-slate-900 dark:bg-white rounded-full" />
+          )}
+        </button>
+      </nav>
+
       {/* Standard Action success Toast notification */}
       {showToast && (
         <div className="fixed bottom-6 left-6 z-50 p-4 rounded-xl border border-primary/25 bg-indigo-900/90 text-white w-80 shadow-xl flex gap-3 animate-in fade-in slide-in-from-bottom duration-300">

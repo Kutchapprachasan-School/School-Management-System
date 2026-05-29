@@ -5,7 +5,8 @@ import {
   Home, Users, BookOpen, Settings, MessageSquare, BarChart3, ShieldAlert,
   Search, Moon, Sun, Bell, AlertTriangle, Plus, CheckCircle2, X, Trash2, 
   Send, Hammer, HelpCircle, FileText, Calendar, Clock, Star, Edit3, ArrowRight,
-  UserCheck, Sparkles, LogOut, CheckSquare, Award, Play, ChevronRight, FileCode, GraduationCap
+  UserCheck, Sparkles, LogOut, CheckSquare, Award, Play, ChevronRight, FileCode, GraduationCap,
+  Menu
 } from "lucide-react";
 
 import { Student, Teacher, LeaveRequest, HealthVisit, TimelineEvent, NotificationItem, AuditLogItem, UserRole } from "@/types/school-os";
@@ -47,6 +48,7 @@ export default function Workspace() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [eleaveSubTab, setEleaveSubTab] = useState<"dashboard" | "form" | "history" | "approvals" | "reports" | "settings">("dashboard");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Core Data States
   const [students, setStudents] = useState<Student[]>(initialStudents);
@@ -619,7 +621,15 @@ export default function Workspace() {
         <header className="h-14 border-b border-border/40 bg-white dark:bg-background px-6 flex items-center justify-between z-10 shrink-0">
           
           {/* Greeting with username */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="md:hidden p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-500 hover:text-foreground transition-all cursor-pointer flex items-center justify-center"
+              title="เปิดเมนูด้านข้าง"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
             <h2 className="font-medium text-sm text-foreground">
               {lang === "th" ? "ยินดีต้อนรับ," : "Welcome,"} <span className="font-semibold">{activeSession.user.name}</span> 👋
             </h2>
@@ -690,7 +700,7 @@ export default function Workspace() {
         </header>
 
         {/* 💻 SECONDARY SUB-MENU TABS & VIEWS */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 space-y-6">
           
           {/* ==================== 1. HOME VIEW ==================== */}
           {activeMenu === "Home" && (
@@ -2081,7 +2091,7 @@ export default function Workspace() {
         </main>
 
         {/* 📱 MOBILE BOTTOM NAV BAR */}
-        <nav className="md:hidden h-16 border-t border-border/80 bg-background/80 backdrop-blur-md flex items-center justify-around shrink-0 px-2">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden h-16 border-t border-border/80 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md flex items-center justify-around px-2 shadow-lg">
           {sidebarMainItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeMenu === item.name;
@@ -2127,6 +2137,99 @@ export default function Workspace() {
           triggerToast("🔄 สลับบทบาทเรียบร้อย", `ขณะนี้คุณกำลังใช้งานระบบในบทบาท: ${newRole}`);
         }}
       />
+
+      {/* 📱 MOBILE SIDEBAR DRAWER OVERLAY */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden animate-in fade-in duration-200">
+          {/* Background backdrop */}
+          <div 
+            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm" 
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          {/* Drawer menu panel */}
+          <div className="relative flex flex-col w-64 max-w-xs bg-white dark:bg-slate-950 h-full border-r border-slate-100 dark:border-slate-800 shadow-2xl p-5 space-y-6 animate-in slide-in-from-left duration-250 z-10">
+            {/* Close button & Brand */}
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
+                  <GraduationCap className="w-4.5 h-4.5 text-white" />
+                </div>
+                <span className="font-bold text-xs text-foreground leading-none">โรงเรียนคุชปะชาสรรค์</span>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setMobileSidebarOpen(false)}
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Navigation items */}
+            <nav className="flex-1 space-y-1.5 overflow-y-auto">
+              <p className="text-[10px] text-slate-400 dark:text-muted-foreground font-semibold uppercase tracking-wider mb-2.5">{lang === "th" ? "เมนูหลัก" : "Main Menu"}</p>
+              {sidebarMainItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeMenu === item.name;
+                return (
+                  <button
+                    key={item.name}
+                    type="button"
+                    onClick={() => {
+                      setActiveMenu(item.name);
+                      if (item.name === "Home") setActiveSubTab("dashboard");
+                      else if (item.name === "People") setActiveSubTab("students");
+                      else if (item.name === "Academic") setActiveSubTab("attendance");
+                      else if (item.name === "Operations") setActiveSubTab("requests");
+                      else if (item.name === "Engagement") setActiveSubTab("line");
+                      setMobileSidebarOpen(false);
+                      addAuditLog("MOBILE_SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      isActive 
+                        ? "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-semibold border-l-4 border-indigo-600 pl-[8px]" 
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/10"
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-muted-foreground"}`} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+
+              {/* Admin modules block */}
+              <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] text-slate-400 dark:text-muted-foreground font-semibold uppercase tracking-wider mb-2.5">{lang === "th" ? "โมดูลผู้ดูแลระบบ" : "Admin Modules"}</p>
+                {sidebarAdminItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeMenu === item.name;
+                  return (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => {
+                        setActiveMenu(item.name);
+                        if (item.name === "Analytics") setActiveSubTab("intelligence");
+                        else if (item.name === "Admin") setActiveSubTab("rules");
+                        setMobileSidebarOpen(false);
+                        addAuditLog("MOBILE_SIDEBAR_CLICK", `คลิกโมดูลแอดมิน: ${item.name}`);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        isActive 
+                          ? "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-semibold border-l-4 border-indigo-600 pl-[8px]" 
+                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/10"
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-muted-foreground"}`} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+          </div>
+        </div>
+      )}
 
       {/* Timeline Drawer overlay */}
       <TimelineEngine 

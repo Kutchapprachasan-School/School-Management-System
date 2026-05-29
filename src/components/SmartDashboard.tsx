@@ -514,75 +514,79 @@ export default function SmartDashboard({
   // Renders for Admin Role
   const renderAdminDashboard = () => (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Admin stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] transition-all duration-300 ease-in-out hover:scale-[1.01] hover:border-slate-200 dark:hover:border-slate-700/80 flex flex-col justify-between min-h-[125px] sm:min-h-[145px]">
-          <div className="flex justify-between items-start gap-2">
-            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-semibold leading-tight truncate">
-              {lang === "th" ? "ผู้ใช้งานทั้งหมด" : "Total Active Users"}
+      {/* Admin stats - Combined Split Hero Banner Card matching mockup */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        {/* Combined Split Hero Card (span 2 cols) */}
+        <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col sm:flex-row justify-between items-stretch gap-6 transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800">
+          {/* Left section: Huge statistic */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
+              {`${lang === "th" ? "ผู้ใช้งานทั้งหมดในระบบ" : "Total Registered Users"}`}
             </span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0"><Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
+            <div className="mt-auto">
+              <p className="text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-none">1,240 คน</p>
+              <span className="text-[10px] text-emerald-600 font-semibold block mt-3">
+                {`${lang === "th" ? "ใช้งานจริง (Active) 99%" : "99% Active Engagement"}`}
+              </span>
+            </div>
+          </div>
+
+          {/* Vertical Divider Hairline */}
+          <div className="hidden sm:block w-px bg-slate-100 dark:bg-slate-900" />
+
+          {/* Right section: Detail metrics */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
+              {`${lang === "th" ? "โครงสร้างตารางฐานข้อมูล" : "Database Models Overview"}`}
+            </span>
+            <div className="mt-auto">
+              <p className="text-sm font-extrabold text-indigo-650 dark:text-indigo-400 leading-tight">
+                {`${lang === "th" ? "ระบบเชื่อมโยงหลัก: 42 ตาราง" : "Core Engines: 42 Models Connected"}`}
+              </p>
+              <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold block mt-2">
+                {`${lang === "th" ? "ซิงค์โมเดลผ่าน Prisma CLI สำเร็จ" : "Schema synced via Prisma Client CLI"}`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Stats Card 1: Core Server Status */}
+        <div className="p-5 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col justify-between min-h-[145px] transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-bold uppercase tracking-wider">
+              {`${lang === "th" ? "สถานะเซิร์ฟเวอร์หลัก" : "Core Server Status"}`}
+            </span>
+            <span className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-650 dark:text-emerald-450 flex items-center justify-center shrink-0 border border-emerald-500/25"><Database className="w-3.5 h-3.5" /></span>
           </div>
           <div className="mt-3">
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white leading-none">
-              {lang === "th" ? "1,240 คน" : "1,240 Users"}
+            <p className="text-3xl font-black tracking-tight text-emerald-650 leading-none">
+              {`${lang === "th" ? "เสถียร" : "Healthy"}`}
             </p>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-2 truncate">
-              {lang === "th" ? "อัตราใช้งาน 99%" : "99% Active Rate"}
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold block mt-2.5 truncate">
+              {`${lang === "th" ? "เซิร์ฟเวอร์สำเร็จ Supabase Cloud" : "Uptime 99.98% Cloud Instance"}`}
             </span>
           </div>
         </div>
 
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] transition-all duration-300 ease-in-out hover:scale-[1.01] hover:border-slate-200 dark:hover:border-slate-700/80 flex flex-col justify-between min-h-[125px] sm:min-h-[145px]">
+        {/* Right Stats Card 2: Golden action pill shortcut */}
+        <div 
+          onClick={() => onNavigate("Admin", "rules")}
+          className="p-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-950/20 dark:hover:bg-amber-950/30 text-amber-900 dark:text-amber-450 flex flex-col justify-between min-h-[145px] transition-all duration-300 cursor-pointer hover:scale-[1.01] hover:shadow-sm"
+        >
           <div className="flex justify-between items-start gap-2">
-            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-semibold leading-tight truncate">
-              {lang === "th" ? "สถานะระบบหลัก" : "Core Server Status"}
+            <span className="text-[11px] sm:text-xs text-amber-800 dark:text-amber-400 font-extrabold uppercase tracking-wider">
+              {`${lang === "th" ? "ควบคุมแผงระบบ >" : "System Control >"}`}
             </span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500/10 text-emerald-650 dark:text-emerald-450 border border-emerald-500/20 flex items-center justify-center shrink-0"><Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
+            <span className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-400 flex items-center justify-center shrink-0"><Sparkles className="w-3.5 h-3.5" /></span>
           </div>
           <div className="mt-3">
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-emerald-600 leading-none">
-              {lang === "th" ? "เสถียร" : "Healthy"}
+            <p className="text-xs font-bold leading-relaxed text-amber-800 dark:text-amber-400">
+              {`${lang === "th" ? "5 กฎการตอบสนองระบบอัตโนมัติ และสถิติความปลอดภัยระบบหลัก" : "5 automated trigger rules and full core system logs"}`}
             </p>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-2 truncate">
-              {lang === "th" ? "เซิร์ฟเวอร์เสร็จสมบูรณ์" : "Supabase Instance Online"}
-            </span>
           </div>
         </div>
 
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] transition-all duration-300 ease-in-out hover:scale-[1.01] hover:border-slate-200 dark:hover:border-slate-700/80 flex flex-col justify-between min-h-[125px] sm:min-h-[145px]">
-          <div className="flex justify-between items-start gap-2">
-            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-semibold leading-tight truncate">
-              {lang === "th" ? "ตารางฐานข้อมูล" : "Database Tables"}
-            </span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-650 dark:text-indigo-400 flex items-center justify-center shrink-0"><FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
-          </div>
-          <div className="mt-3">
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400 leading-none">
-              {lang === "th" ? "42 ตาราง" : "42 Tables"}
-            </p>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-2 truncate">
-              {lang === "th" ? "ซิงค์โมเดลสำเร็จ" : "Synced via Prisma"}
-            </span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] transition-all duration-300 ease-in-out hover:scale-[1.01] hover:border-slate-200 dark:hover:border-slate-700/80 flex flex-col justify-between min-h-[125px] sm:min-h-[145px]">
-          <div className="flex justify-between items-start gap-2">
-            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-semibold leading-tight truncate">
-              {lang === "th" ? "กฎการทํางาน" : "Rule Engines"}
-            </span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-450 border border-amber-500/20 flex items-center justify-center shrink-0"><BellRing className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
-          </div>
-          <div className="mt-3">
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-amber-600 leading-none">
-              {lang === "th" ? "5 กฎ" : "5 Rules"}
-            </p>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-2 truncate">
-              {lang === "th" ? "ระบบตอบสนองอัตโนมัติ" : "Event rules active"}
-            </span>
-          </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -725,6 +725,7 @@ export default function Workspace() {
               {/* Renders dynamic role based dashboards */}
               <SmartDashboard 
                 role={role}
+                lang={lang}
                 students={students}
                 leaveRequests={leaveRequests}
                 onNavigate={navigateTo}

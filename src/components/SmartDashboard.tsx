@@ -40,75 +40,79 @@ export default function SmartDashboard({
   // Renders for Teacher Role
   const renderTeacherDashboard = () => (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Overview stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] transition-all duration-300 ease-in-out hover:scale-[1.01] hover:border-slate-200 dark:hover:border-slate-700/80 flex flex-col justify-between min-h-[125px] sm:min-h-[145px]">
-          <div className="flex justify-between items-start gap-2">
-            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-semibold leading-tight truncate">
-              {lang === "th" ? "คาบสอนวันนี้" : "Periods Today"}
+      {/* Overview stats - Combined Split Hero Banner Card matching mockup */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        {/* Combined Split Hero Card (span 2 cols) */}
+        <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col sm:flex-row justify-between items-stretch gap-6 transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800">
+          {/* Left section: Huge statistic */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
+              {lang === "th" ? "คาบสอนวันนี้" : "Teaching Periods Today"}
             </span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0"><BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
+            <div className="mt-auto">
+              <p className="text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-none">4 คาบ</p>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold block mt-3">
+                {lang === "th" ? "อัพเดทตารางสอนล่าสุด" : "Last updated today"}
+              </span>
+            </div>
           </div>
-          <div className="mt-3">
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white leading-none">
-              {lang === "th" ? "4 คาบ" : "4 Periods"}
-            </p>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-2 truncate">
-              {lang === "th" ? "ชั้น ม.6/1" : "Grade 12/1"}
+
+          {/* Vertical Divider Hairline */}
+          <div className="hidden sm:block w-px bg-slate-100 dark:bg-slate-900" />
+
+          {/* Right section: Detail metrics */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
+              {lang === "th" ? "ชั้นเรียนหลักรับผิดชอบ" : "Primary Academic Class"}
             </span>
+            <div className="mt-auto">
+              <p className="text-sm font-extrabold text-indigo-650 dark:text-indigo-400 leading-tight">
+                {lang === "th" ? "วิชา: ภาษาไทยพื้นฐาน" : "Subject: Basic Thai Literature"}
+              </p>
+              <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold block mt-2 leading-relaxed">
+                {lang === "th" ? "ม.6/1 (คาบที่ 1-2 ในอาคารเรียน 3)" : "Grade 12/1 (Period 1-2 • Building 3)"}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] transition-all duration-300 ease-in-out hover:scale-[1.01] hover:border-slate-200 dark:hover:border-slate-700/80 flex flex-col justify-between min-h-[125px] sm:min-h-[145px]">
+        {/* Right Stats Card 1: Absent Students */}
+        <div className="p-5 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col justify-between min-h-[145px] transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800">
           <div className="flex justify-between items-start gap-2">
-            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-semibold leading-tight truncate">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-bold uppercase tracking-wider">
               {lang === "th" ? "นักเรียนขาดเรียน" : "Absent Students"}
             </span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-450 flex items-center justify-center shrink-0 border border-rose-500/20"><ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
+            <span className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/25"><ShieldAlert className="w-3.5 h-3.5" /></span>
           </div>
           <div className="mt-3">
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-rose-600 leading-none">
+            <p className="text-3xl font-black tracking-tight text-rose-600 leading-none">
               {lang === "th" ? `${absentToday} คน` : `${absentToday} Students`}
             </p>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-2 truncate">
-              {lang === "th" ? `ทั้งหมด ${totalStudentsCount} คน` : `Total ${totalStudentsCount}`}
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold block mt-2.5 truncate">
+              {lang === "th" ? `มาเรียนสาย ${lateToday} คน / ทั้งหมด ${totalStudentsCount} คน` : `Late ${lateToday} / Total ${totalStudentsCount} Students`}
             </span>
           </div>
         </div>
 
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] transition-all duration-300 ease-in-out hover:scale-[1.01] hover:border-slate-200 dark:hover:border-slate-700/80 flex flex-col justify-between min-h-[125px] sm:min-h-[145px]">
+        {/* Right Stats Card 2: Golden action pill shortcut */}
+        <div 
+          onClick={() => onNavigate("Academic", "attendance")}
+          className="p-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-950/20 dark:hover:bg-amber-950/30 text-amber-900 dark:text-amber-450 flex flex-col justify-between min-h-[145px] transition-all duration-300 cursor-pointer hover:scale-[1.01] hover:shadow-sm"
+        >
           <div className="flex justify-between items-start gap-2">
-            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-semibold leading-tight truncate">
-              {lang === "th" ? "นักเรียนมาสาย" : "Late Arrivals"}
+            <span className="text-[11px] sm:text-xs text-amber-800 dark:text-amber-400 font-extrabold uppercase tracking-wider">
+              {lang === "th" ? "ห้องเรียนอัจฉริยะ >" : "Smart Classroom >"}
             </span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-450 flex items-center justify-center shrink-0 border border-amber-500/20"><Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
+            <span className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-400 flex items-center justify-center shrink-0"><Sparkles className="w-3.5 h-3.5" /></span>
           </div>
           <div className="mt-3">
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-amber-600 leading-none">
-              {lang === "th" ? `${lateToday} คน` : `${lateToday} Students`}
+            <p className="text-xs font-bold leading-relaxed text-amber-800 dark:text-amber-400">
+              {lang === "th" ? "18 รายการส่งงานค้างส่งและรอเช็คชื่อนักเรียนประจำวัน" : "18 Homework tasks pending review and roll-call"}
             </p>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-2 truncate">
-              {lang === "th" ? "ควรเช็ครายชื่อ" : "Requires Attention"}
-            </span>
           </div>
         </div>
 
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] transition-all duration-300 ease-in-out hover:scale-[1.01] hover:border-slate-200 dark:hover:border-slate-700/80 flex flex-col justify-between min-h-[125px] sm:min-h-[145px]">
-          <div className="flex justify-between items-start gap-2">
-            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-semibold leading-tight truncate">
-              {lang === "th" ? "เคสห้องพยาบาล" : "Clinic Visits"}
-            </span>
-            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 flex items-center justify-center shrink-0 border border-emerald-500/20"><HeartPulse className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></span>
-          </div>
-          <div className="mt-3">
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-emerald-650 leading-none">
-              {lang === "th" ? "2 ราย" : "2 Cases"}
-            </p>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-2 truncate">
-              {lang === "th" ? "มีการจ่ายยาทั่วไป" : "General Medicine"}
-            </span>
-          </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -181,11 +185,13 @@ export default function SmartDashboard({
                 { title: lang === "th" ? "ประเมินผลจิตวิทยา SDQ" : "Complete Mental SDQ Evaluation", done: true, desc: lang === "th" ? "เสร็จสิ้น" : "Completed" },
               ].map((task, i) => (
                 <div key={i} className="flex gap-3 items-start transition-all duration-300 p-1 hover:bg-slate-50/50 dark:hover:bg-slate-900/20 rounded-lg">
-                  <span className={`w-4.5 h-4.5 rounded-full flex items-center justify-center border mt-0.5 shrink-0 ${
-                    task.done ? "bg-emerald-500/10 text-emerald-650 border-emerald-500/25" : "border-slate-200 dark:border-slate-800 text-transparent"
-                  }`}>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </span>
+                  {task.done ? (
+                    <span className="w-4.5 h-4.5 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-950 flex items-center justify-center mt-0.5 shrink-0 cursor-pointer shadow-sm transition-all border border-slate-900 dark:border-white">
+                      <CheckCircle2 className="w-3.5 h-3.5 fill-current" />
+                    </span>
+                  ) : (
+                    <span className="w-4.5 h-4.5 rounded-full border border-slate-350 dark:border-slate-700 bg-transparent flex items-center justify-center mt-0.5 shrink-0 cursor-pointer hover:border-slate-500 transition-all" />
+                  )}
                   <div>
                     <h4 className={`text-xs font-semibold leading-tight ${task.done ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-800 dark:text-slate-200"}`}>{task.title}</h4>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium">{task.desc}</p>
@@ -212,73 +218,78 @@ export default function SmartDashboard({
   // Renders for Director Role
   const renderDirectorDashboard = () => (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Top Banner stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Top Banner stats - Combined Split Hero Banner Card matching mockup */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        {/* Total Attendance Chart */}
-        <div className="p-5 sm:p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] flex items-center justify-between transition-all duration-300 ease-in-out hover:scale-[1.005]">
-          <div>
-            <h3 className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-555 uppercase tracking-wider">
-              {lang === "th" ? "อัตราการเข้าเรียน" : "Daily Attendance Rate"}
-            </h3>
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white mt-2.5">96.8%</p>
-            <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-2.5">
-              <TrendingUp className="w-3.5 h-3.5" />
-              {lang === "th" ? "เพิ่มขึ้น +0.5%" : "+0.5% vs Yesterday"}
+        {/* Combined Split Hero Card (span 2 cols) */}
+        <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col sm:flex-row justify-between items-stretch gap-6 transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800">
+          {/* Left section: Huge statistic */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
+              {lang === "th" ? "อัตราเข้าเรียนวันนี้" : "Attendance Rate Today"}
             </span>
+            <div className="mt-auto flex items-baseline gap-2">
+              <p className="text-5xl font-black tracking-tight text-indigo-650 dark:text-indigo-400 leading-none">96.8%</p>
+              <span className="text-xs text-emerald-600 font-bold flex items-center gap-0.5">
+                <TrendingUp className="w-3 h-3" />
+                +0.5%
+              </span>
+            </div>
           </div>
-          {/* Animated circular gauge */}
-          <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shrink-0">
-            <svg className="w-full h-full transform -rotate-90">
-              <circle cx="32" cy="32" r="28" className="stroke-slate-50 dark:stroke-slate-900" strokeWidth="5" fill="transparent" />
-              <circle cx="32" cy="32" r="28" className="stroke-indigo-650 dark:stroke-indigo-400" strokeWidth="5" fill="transparent" strokeDasharray="175" strokeDashoffset="5" strokeLinecap="round" />
-            </svg>
-            <span className="absolute text-[10px] font-bold text-indigo-650 dark:text-indigo-400">96.8%</span>
+
+          {/* Vertical Divider Hairline */}
+          <div className="hidden sm:block w-px bg-slate-100 dark:bg-slate-900" />
+
+          {/* Right section: Detail metrics */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
+              {lang === "th" ? "การประเมินและบริหาร" : "Executive Evaluation"}
+            </span>
+            <div className="mt-auto">
+              <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200 leading-tight">
+                {lang === "th" ? "ระบบตรวจสุขภาพจิตนักเรียน" : "Student Mental SDQ Panel"}
+              </p>
+              <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold block mt-2">
+                {lang === "th" ? "การคัดกรองช่วยเหลือเสร็จ 92%" : "92% screening forms completed"}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Student at Risk Indicator */}
-        <div className="p-5 sm:p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] flex items-center justify-between transition-all duration-300 ease-in-out hover:scale-[1.005]">
-          <div>
-            <h3 className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-555 uppercase tracking-wider">
+        {/* Right Stats Card 1: Risk Students */}
+        <div className="p-5 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col justify-between min-h-[145px] transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-bold uppercase tracking-wider">
               {lang === "th" ? "นักเรียนกลุ่มเสี่ยง" : "At-Risk Students"}
-            </h3>
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-rose-600 mt-2.5">
+            </span>
+            <span className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/25"><AlertTriangle className="w-3.5 h-3.5" /></span>
+          </div>
+          <div className="mt-3">
+            <p className="text-3xl font-black tracking-tight text-rose-600 leading-none">
               {lang === "th" ? `${riskStudents.length} คน` : `${riskStudents.length} Students`}
             </p>
-            <span className="text-[10px] text-rose-600 font-semibold flex items-center gap-1 mt-2.5">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              {lang === "th" ? "ต้องการช่วยเหลือ" : "Requires Support"}
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold block mt-2.5 truncate">
+              {lang === "th" ? "ระดับวิกฤต ต้องการช่วยเหลือด่วน" : "Requires urgent counseling support"}
             </span>
           </div>
-          <button 
-            onClick={() => onNavigate("Analytics", "risk")}
-            className="w-10 h-10 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-450 border border-rose-500/20 flex items-center justify-center hover:scale-105 transition-transform cursor-pointer shrink-0"
-          >
-            <AlertTriangle className="w-5 h-5" />
-          </button>
         </div>
 
-        {/* School KPI */}
-        <div className="p-5 sm:p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] flex items-center justify-between transition-all duration-300 ease-in-out hover:scale-[1.005]">
-          <div>
-            <h3 className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-555 uppercase tracking-wider">
-              {lang === "th" ? "เอกสารค้างพิจารณา" : "Pending Documents"}
-            </h3>
-            <p className="text-3xl sm:text-4xl font-bold tracking-tight text-amber-600 mt-2.5">
-              {lang === "th" ? `${pendingLeaves.length} เรื่อง` : `${pendingLeaves.length} Cases`}
-            </p>
-            <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1 mt-2.5">
-              <FileText className="w-3.5 h-3.5" />
-              {lang === "th" ? "รอลงนามอนุมัติ" : "Pending Signoff"}
+        {/* Right Stats Card 2: Golden action pill shortcut */}
+        <div 
+          onClick={() => onNavigate("Operations", "requests")}
+          className="p-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-950/20 dark:hover:bg-amber-950/30 text-amber-900 dark:text-amber-450 flex flex-col justify-between min-h-[145px] transition-all duration-300 cursor-pointer hover:scale-[1.01] hover:shadow-sm"
+        >
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-amber-800 dark:text-amber-400 font-extrabold uppercase tracking-wider">
+              {lang === "th" ? "ห้องทำงานผู้บริหาร >" : "Executive Desk >"}
             </span>
+            <span className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-400 flex items-center justify-center shrink-0"><FileText className="w-3.5 h-3.5" /></span>
           </div>
-          <button 
-            onClick={() => onNavigate("Operations", "requests")}
-            className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-450 border border-amber-500/20 flex items-center justify-center hover:scale-105 transition-transform cursor-pointer shrink-0"
-          >
-            <FileText className="w-5 h-5" />
-          </button>
+          <div className="mt-3">
+            <p className="text-xs font-bold leading-relaxed text-amber-800 dark:text-amber-400">
+              {lang === "th" ? `${pendingLeaves.length} เรื่องเอกสารคำขอลาและใบเสนออนุมัติค้างลงนามดิจิทัล` : `${pendingLeaves.length} leave requests and budget approvals waiting signatures`}
+            </p>
+          </div>
         </div>
 
       </div>
@@ -366,59 +377,79 @@ export default function SmartDashboard({
   // Renders for Student / Parent Role
   const renderStudentDashboard = () => (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] flex flex-col items-center text-center justify-between min-h-[135px] sm:min-h-[155px] transition-all duration-300 hover:scale-[1.01]">
-          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-450 border border-amber-500/20 flex items-center justify-center shrink-0"><Award className="w-4.5 h-4.5 sm:w-5 h-5" /></span>
-          <div className="w-full mt-3">
-            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 uppercase font-bold leading-tight block truncate">
+      {/* Stats Cards - Combined Split Hero Banner Card matching mockup */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        {/* Combined Split Hero Card (span 2 cols) */}
+        <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col sm:flex-row justify-between items-stretch gap-6 transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800">
+          {/* Left section: Huge statistic */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
               {lang === "th" ? "คะแนนความประพฤติ" : "Conduct Points"}
             </span>
-            <span className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white block mt-1.5">95</span>
-            <span className="text-[9px] text-emerald-600 font-bold block mt-1 truncate">
-              {lang === "th" ? "พฤติกรรมดีเยี่ยม" : "Excellent Rating"}
+            <div className="mt-auto">
+              <p className="text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-none">95</p>
+              <span className="text-[10px] text-emerald-600 font-semibold block mt-3">
+                {lang === "th" ? "ระดับดีเยี่ยม" : "Excellent Rating"}
+              </span>
+            </div>
+          </div>
+
+          {/* Vertical Divider Hairline */}
+          <div className="hidden sm:block w-px bg-slate-100 dark:bg-slate-900" />
+
+          {/* Right section: Detail metrics */}
+          <div className="flex-1 flex flex-col justify-between min-h-[110px]">
+            <span className="text-[11px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider block">
+              {lang === "th" ? "ชั้นเรียนของข้าพเจ้า" : "Active School Room"}
             </span>
+            <div className="mt-auto">
+              <p className="text-sm font-extrabold text-indigo-650 dark:text-indigo-400 leading-tight">
+                {lang === "th" ? "ระดับชั้น มัธยมศึกษาปีที่ 6/1" : "Grade 12 / Room 1"}
+              </p>
+              <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold block mt-2">
+                {lang === "th" ? "อาจารย์ประจำชั้น: ครูวรรณภา" : "Homeroom Teacher: Mrs. Wannapha"}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] flex flex-col items-center text-center justify-between min-h-[135px] sm:min-h-[155px] transition-all duration-300 hover:scale-[1.01]">
-          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-500/10 text-emerald-650 dark:text-emerald-450 border border-emerald-500/20 flex items-center justify-center shrink-0"><CheckCircle2 className="w-4.5 h-4.5 sm:w-5 h-5" /></span>
-          <div className="w-full mt-3">
-            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 uppercase font-bold leading-tight block truncate">
-              {lang === "th" ? "อัตราการเข้าเรียน" : "Attendance Rate"}
-            </span>
-            <span className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white block mt-1.5">98%</span>
-            <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1 truncate">
-              {lang === "th" ? "ขาด 1 • สาย 1 ครั้ง" : "Absent 1 • Late 1"}
-            </span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] flex flex-col items-center text-center justify-between min-h-[135px] sm:min-h-[155px] transition-all duration-300 hover:scale-[1.01]">
-          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-650 dark:text-indigo-400 flex items-center justify-center shrink-0"><GraduationCap className="w-4.5 h-4.5 sm:w-5 h-5" /></span>
-          <div className="w-full mt-3">
-            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 uppercase font-bold leading-tight block truncate">
-              {lang === "th" ? "เกรดเฉลี่ยปัจจุบัน" : "Current GPA"}
-            </span>
-            <span className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white block mt-1.5">3.85</span>
-            <span className="text-[9px] text-slate-400 dark:text-slate-500 block mt-1 truncate">
-              {lang === "th" ? "ภาคเรียน 1/2569" : "Semester 1/2026"}
-            </span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] flex flex-col items-center text-center justify-between min-h-[135px] sm:min-h-[155px] transition-all duration-300 hover:scale-[1.01]">
-          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-450 border border-rose-500/20 flex items-center justify-center shrink-0"><BookOpen className="w-4.5 h-4.5 sm:w-5 h-5" /></span>
-          <div className="w-full mt-3">
-            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 uppercase font-bold leading-tight block truncate">
+        {/* Right Stats Card 1: Pending Homework */}
+        <div className="p-5 rounded-2xl border border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 shadow-[0_2px_16px_rgba(0,0,0,0.015)] flex flex-col justify-between min-h-[145px] transition-all duration-300 hover:border-slate-200/80 dark:hover:border-slate-800">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-bold uppercase tracking-wider">
               {lang === "th" ? "การบ้านค้างส่ง" : "Pending Homework"}
             </span>
-            <span className="text-3xl sm:text-4xl font-bold tracking-tight text-rose-600 block mt-1.5">1 งาน</span>
-            <span className="text-[9px] text-rose-600 font-bold block mt-1 truncate">
-              {lang === "th" ? "ส่งวันพรุ่งนี้" : "Due Tomorrow"}
+            <span className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-450 flex items-center justify-center shrink-0 border border-rose-500/25"><BookOpen className="w-3.5 h-3.5" /></span>
+          </div>
+          <div className="mt-3">
+            <p className="text-3xl font-black tracking-tight text-rose-600 leading-none">
+              {lang === "th" ? "1 งาน" : "1 Task"}
+            </p>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold block mt-2.5 truncate">
+              {lang === "th" ? "ภาษาไทยพื้นฐาน ส่งในวันพรุ่งนี้" : "Basic Thai Literature due tomorrow"}
             </span>
           </div>
         </div>
+
+        {/* Right Stats Card 2: Golden action pill shortcut */}
+        <div 
+          onClick={() => onNavigate("Home", "dashboard")}
+          className="p-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-950/20 dark:hover:bg-amber-950/30 text-amber-900 dark:text-amber-450 flex flex-col justify-between min-h-[145px] transition-all duration-300 cursor-pointer hover:scale-[1.01] hover:shadow-sm"
+        >
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] sm:text-xs text-amber-800 dark:text-amber-400 font-extrabold uppercase tracking-wider">
+              {lang === "th" ? "ห้องเรียนของฉัน >" : "My Classroom >"}
+            </span>
+            <span className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-400 flex items-center justify-center shrink-0"><Award className="w-3.5 h-3.5" /></span>
+          </div>
+          <div className="mt-3">
+            <p className="text-xs font-bold leading-relaxed text-amber-800 dark:text-amber-400">
+              {lang === "th" ? "เกรดเฉลี่ยสะสมเรียนดีเด่น 3.85 และรายละเอียดวิชาการตารางเรียนทั้งหมด" : "Honor roll average GPA 3.85 and full subject timetable overview"}
+            </p>
+          </div>
+        </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

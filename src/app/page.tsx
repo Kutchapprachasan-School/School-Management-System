@@ -506,110 +506,115 @@ export default function Workspace() {
   return (
     <div className={`flex-1 flex overflow-hidden min-h-screen bg-background relative text-foreground ${lang === 'th' ? 'font-th' : 'font-en'}`}>
       
-      {/* 🚀 SIDEBAR PRINCIPAL */}
-      <aside className="hidden md:flex flex-col w-56 border-r border-border/40 bg-white dark:bg-sidebar">
-        {/* Brand Logo */}
-        <div className="h-16 flex items-center gap-3 px-5 border-b border-border/40">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-800 flex items-center justify-center shadow-sm">
+      {/* 🚀 SIDEBAR PRINCIPAL - SLEEK VERTICAL ICON BAR */}
+      <aside className="hidden md:flex flex-col w-20 border-r border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 items-center py-6 justify-between z-20 shrink-0">
+        
+        {/* Brand Profile Element */}
+        <div className="flex flex-col items-center gap-6 w-full">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-650 to-indigo-800 flex items-center justify-center shadow-md shadow-indigo-600/10 cursor-pointer hover:scale-105 transition-transform" title="School OS - โรงเรียนคุชปะชาสรรค์">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <h1 className="font-bold text-sm tracking-tight text-foreground leading-none">โรงเรียนคุชปะชาสรรค์</h1>
-            <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-1">School OS</p>
-          </div>
+
+          <div className="w-10 h-px bg-slate-100 dark:bg-slate-900" />
+          
+          {/* Centered Navigation Links */}
+          <nav className="flex flex-col items-center gap-4 w-full px-2">
+            {sidebarMainItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeMenu === item.name;
+              return (
+                <button
+                  key={item.name}
+                  type="button"
+                  onClick={() => {
+                    setActiveMenu(item.name);
+                    if (item.name === "Home") setActiveSubTab("dashboard");
+                    else if (item.name === "People") setActiveSubTab("students");
+                    else if (item.name === "Academic") setActiveSubTab("attendance");
+                    else if (item.name === "Operations") setActiveSubTab("requests");
+                    else if (item.name === "Engagement") setActiveSubTab("line");
+                    addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
+                  }}
+                  className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 relative group cursor-pointer ${
+                    isActive 
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-md shadow-slate-900/10 scale-105" 
+                      : "text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  {/* Tooltip */}
+                  <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-850 text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg border border-slate-800 dark:border-slate-700">
+                    {item.label}
+                  </div>
+                </button>
+              );
+            })}
+
+            <div className="w-10 h-px bg-slate-100 dark:bg-slate-900 my-1" />
+
+            {sidebarAdminItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeMenu === item.name;
+              return (
+                <button
+                  key={item.name}
+                  type="button"
+                  onClick={() => {
+                    setActiveMenu(item.name);
+                    if (item.name === "Analytics") setActiveSubTab("risk");
+                    else if (item.name === "Admin") setActiveSubTab("rules");
+                    addAuditLog("SIDEBAR_CLICK", `คลิกเมนูแอดมิน: ${item.name}`);
+                  }}
+                  className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 relative group cursor-pointer ${
+                    isActive 
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-md shadow-slate-900/10 scale-105" 
+                      : "text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  {/* Tooltip */}
+                  <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-850 text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg border border-slate-800 dark:border-slate-700">
+                    {item.label}
+                  </div>
+                </button>
+              );
+            })}
+
+            <a
+              href="/eleave"
+              className="w-11 h-11 flex items-center justify-center rounded-xl text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all group relative"
+            >
+              <FileText className="w-5 h-5 text-indigo-500" />
+              <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-indigo-650 text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                {lang === "th" ? "โปรไฟล์และใบลา" : "Leave & Profile"}
+              </div>
+            </a>
+          </nav>
         </div>
 
-        {/* Navigation links */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <p className="text-[10px] text-slate-400 dark:text-muted-foreground font-semibold uppercase tracking-wider px-3 mb-2">{lang === "th" ? "เมนูหลัก" : "Main Menu"}</p>
-          {sidebarMainItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeMenu === item.name;
-            return (
-              <button
-                key={item.name}
-                onClick={() => {
-                  setActiveMenu(item.name);
-                  if (item.name === "Home") setActiveSubTab("dashboard");
-                  else if (item.name === "People") setActiveSubTab("students");
-                  else if (item.name === "Academic") setActiveSubTab("attendance");
-                  else if (item.name === "Operations") setActiveSubTab("requests");
-                  else if (item.name === "Engagement") setActiveSubTab("line");
-                  addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-[13px] font-medium transition-all duration-150 relative rounded-lg ${
-                  isActive 
-                    ? "bg-indigo-50/70 dark:bg-indigo-500/5 text-indigo-600 dark:text-indigo-400 font-semibold border-l-4 border-indigo-600 pl-[8px]" 
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50/80 dark:hover:bg-slate-900/10 hover:text-slate-900"
-                }`}
-              >
-                <Icon className={`w-[18px] h-[18px] ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-muted-foreground"}`} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-
-          <div className="pt-3 pb-2 px-3">
-            <div className="h-px bg-border/40 w-full" />
-          </div>
-
-          <p className="text-[10px] text-slate-400 dark:text-muted-foreground font-semibold uppercase tracking-wider px-3 mb-2">{lang === "th" ? "บัญชีผู้ใช้" : "Account"}</p>
-          {sidebarAdminItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeMenu === item.name;
-            return (
-              <button
-                key={item.name}
-                onClick={() => {
-                  setActiveMenu(item.name);
-                  if (item.name === "Analytics") setActiveSubTab("risk");
-                  else if (item.name === "Admin") setActiveSubTab("rules");
-                  addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-[13px] font-medium transition-all duration-150 relative rounded-lg ${
-                  isActive 
-                    ? "bg-indigo-50/70 dark:bg-indigo-500/5 text-indigo-600 dark:text-indigo-400 font-semibold border-l-4 border-indigo-600 pl-[8px]" 
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50/80 dark:hover:bg-slate-900/10 hover:text-slate-900"
-                }`}
-              >
-                <Icon className={`w-[18px] h-[18px] ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-muted-foreground"}`} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-
-          <a
-            href="/eleave"
-            className="mt-2 w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-500/5 transition-all"
-          >
-            <FileText className="w-[18px] h-[18px] text-indigo-400" />
-            <span>{lang === "th" ? "โปรไฟล์ของฉัน" : "My Profile"}</span>
-          </a>
-        </nav>
-
-        {/* User Account */}
-        <div className="p-4 border-t border-border/40 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-full border-2 border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold text-sm flex items-center justify-center shrink-0">
-              {activeSession.user.name ? activeSession.user.name.charAt(0).toUpperCase() : "U"}
-            </div>
-            <div className="overflow-hidden">
-              <h4 className="font-semibold text-xs truncate text-foreground leading-none">{activeSession.user.name}</h4>
-              <span className="text-[10px] text-slate-400 dark:text-muted-foreground mt-1 capitalize block truncate">
-                {role === "admin" ? (lang === "th" ? "แอดมิน" : "Admin") : role === "director" ? (lang === "th" ? "ผู้บริหาร" : "Executive") : (activeSession.user as any).position || (lang === "th" ? "อาจารย์" : "Teacher")}
+        {/* User Account / Sign Out Section */}
+        <div className="flex flex-col items-center gap-4 w-full">
+          <div className="w-9 h-9 rounded-full border-2 border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0 cursor-pointer shadow-sm hover:scale-105 transition-all group relative">
+            {activeSession.user.name ? activeSession.user.name.charAt(0).toUpperCase() : "U"}
+            <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-850 text-white text-[10px] font-semibold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg leading-tight">
+              {activeSession.user.name}
+              <span className="block text-[8px] text-slate-400 dark:text-slate-500 font-medium capitalize mt-0.5">
+                {role === "admin" ? (lang === "th" ? "แอดมิน" : "Admin") : role === "director" ? (lang === "th" ? "ผู้บริหาร" : "Executive") : (lang === "th" ? "อาจารย์" : "Teacher")}
               </span>
             </div>
           </div>
+          
           <button
             onClick={async () => {
               await signOut();
               router.push("/login");
             }}
-            className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-rose-500 dark:text-muted-foreground dark:hover:text-rose-400 transition-all"
-            title={lang === "th" ? "ออกจากระบบ" : "Sign Out"}
+            className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all cursor-pointer group relative"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">{lang === "th" ? "ออกจากระบบ" : "Logout"}</span>
+            <LogOut className="w-5 h-5" />
+            <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-rose-650 text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+              {lang === "th" ? "ออกจากระบบ" : "Sign Out"}
+            </div>
           </button>
         </div>
       </aside>
@@ -618,9 +623,9 @@ export default function Workspace() {
       <div className="flex-1 flex flex-col overflow-hidden">
         
         {/* top header bar */}
-        <header className="h-14 border-b border-border/40 bg-white dark:bg-background px-6 flex items-center justify-between z-10 shrink-0">
+        <header className="h-16 border-b border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 px-6 flex items-center justify-between z-10 shrink-0">
           
-          {/* Greeting with username */}
+          {/* Greeting with username & Subtitle from Mockup */}
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -630,13 +635,29 @@ export default function Workspace() {
             >
               <Menu className="w-4 h-4" />
             </button>
-            <h2 className="font-medium text-sm text-foreground">
-              {lang === "th" ? "ยินดีต้อนรับ," : "Welcome,"} <span className="font-semibold">{activeSession.user.name}</span> 👋
-            </h2>
+            <div className="flex flex-col">
+              <h2 className="font-extrabold text-lg sm:text-xl text-slate-900 dark:text-white leading-tight tracking-tight">
+                {lang === "th" ? "แดชบอร์ด" : "Dashboard"}
+              </h2>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
+                {lang === "th" ? "ปีการศึกษา 2569 • ภาคเรียนที่ 1" : "Academic Year 2026 • Semester 1"}
+              </span>
+            </div>
           </div>
 
           {/* Right utility shortcuts */}
           <div className="flex items-center gap-2.5">
+            
+            {/* Plus Shortcut Button from Mockup */}
+            <button
+              onClick={() => {
+                triggerToast(lang === "th" ? "➕ สร้างรายการใหม่" : "➕ Create New Item", lang === "th" ? "เปิดใช้งานคำสั่งสร้างด่วนสำเร็จ" : "Quick action created successfully.");
+              }}
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer"
+              title={lang === "th" ? "สร้างรายการใหม่" : "Create New"}
+            >
+              <Plus className="w-4.5 h-4.5" />
+            </button>
 
             {/* Notification Bell */}
             <div className="relative">
@@ -645,13 +666,11 @@ export default function Workspace() {
                   setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
                   triggerToast("🔔 เคลียร์แจ้งเตือน", "เปิดอ่านแจ้งเตือนทั้งหมดเรียบร้อยแล้ว");
                 }}
-                className="p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-400 hover:text-foreground relative transition-all"
+                className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer relative"
               >
-                <Bell className="w-[18px] h-[18px]" />
+                <Bell className="w-4.5 h-4.5" />
                 {unreadNotifCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
-                    {unreadNotifCount}
-                  </span>
+                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full" />
                 )}
               </button>
             </div>
@@ -664,7 +683,7 @@ export default function Workspace() {
                 addAuditLog("SWITCH_LANGUAGE", `เปลี่ยนภาษาอินเตอร์เฟสเป็น: ${newLang === "th" ? "ภาษาไทย" : "English"}`);
                 triggerToast(lang === "th" ? "🇺🇸 Switched to English" : "🇹🇭 เปลี่ยนเป็นภาษาไทย", lang === "th" ? "Application language is now English." : "เปลี่ยนการแสดงผลเป็นภาษาไทยเรียบร้อยแล้ว");
               }}
-              className="h-8 px-3 rounded-lg border border-border/60 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-muted-foreground font-semibold text-xs transition-all"
+              className="h-8.5 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-650 dark:text-muted-foreground font-bold text-xs transition-all"
             >
               {lang === "th" ? "TH" : "EN"}
             </button>
@@ -672,15 +691,15 @@ export default function Workspace() {
             {/* Dark Mode Toggle */}
             <button 
               onClick={() => setDarkMode(prev => !prev)}
-              className="p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-400 hover:text-foreground transition-all"
+              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer"
             >
-              {darkMode ? <Sun className="w-[18px] h-[18px] text-amber-500" /> : <Moon className="w-[18px] h-[18px]" />}
+              {darkMode ? <Sun className="w-4.5 h-4.5 text-amber-500" /> : <Moon className="w-4.5 h-4.5" />}
             </button>
 
             {/* Role Swapper - compact */}
             <div className="hidden lg:flex items-center">
               <select
-                className="h-8 bg-slate-50 dark:bg-slate-900 border border-border/60 outline-none text-xs font-semibold text-slate-600 dark:text-muted-foreground px-3 py-1 rounded-lg appearance-none cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
+                className="h-8.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 outline-none text-xs font-bold text-slate-600 dark:text-muted-foreground px-3 py-1 rounded-lg cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
                 value={role}
                 onChange={(e) => {
                   const newRole = e.target.value as UserRole;

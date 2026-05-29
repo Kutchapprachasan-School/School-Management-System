@@ -67,7 +67,7 @@ export default function SmartDashboard({
               {lang === "th" ? "ชั้นเรียนหลักรับผิดชอบ" : "Primary Academic Class"}
             </span>
             <div className="mt-auto">
-              <p className="text-sm font-extrabold text-indigo-650 dark:text-indigo-400 leading-tight">
+              <p className="text-sm font-extrabold text-[#2d2d2d] dark:text-amber-400 leading-tight">
                 {lang === "th" ? "วิชา: ภาษาไทยพื้นฐาน" : "Subject: Basic Thai Literature"}
               </p>
               <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold block mt-2 leading-relaxed">
@@ -119,7 +119,7 @@ export default function SmartDashboard({
         {/* Today's Timetable slots */}
         <div className="lg:col-span-2 p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] space-y-5">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             {lang === "th" ? "ตารางสอนประจำวันนี้" : "Today's Teaching Schedule"}
           </h3>
           <div className="space-y-3">
@@ -135,7 +135,7 @@ export default function SmartDashboard({
                 slot.status === "done" 
                   ? "bg-slate-50/40 dark:bg-slate-950/20 border-slate-100 dark:border-slate-900/60 opacity-60" 
                   : slot.status === "next" 
-                  ? "bg-indigo-50/40 dark:bg-indigo-950/10 border-indigo-100 dark:border-indigo-900/40 shadow-sm" 
+                  ? "bg-amber-50/40 dark:bg-amber-950/10 border-amber-100 dark:border-amber-900/40 shadow-sm" 
                   : "bg-white dark:bg-card border-slate-100 dark:border-slate-800/60"
               }`}>
                 <div className="flex items-center gap-4">
@@ -143,7 +143,7 @@ export default function SmartDashboard({
                     slot.status === "done" 
                       ? "bg-slate-100 dark:bg-slate-800 text-slate-500" 
                       : slot.status === "next" 
-                      ? "bg-indigo-650 text-white shadow-sm" 
+                      ? "bg-[#2d2d2d] text-white shadow-sm" 
                       : "bg-slate-50 dark:bg-slate-900 text-slate-650 dark:text-slate-350"
                   }`}>{slot.period}</span>
                   <div>
@@ -158,7 +158,7 @@ export default function SmartDashboard({
                 ) : slot.status === "next" ? (
                   <button 
                     onClick={() => onNavigate("Academic", "teaching")}
-                    className="text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-all cursor-pointer"
+                    className="text-[11px] font-bold bg-[#2d2d2d] hover:bg-[#3a3a3a] text-white px-3 py-1.5 rounded-lg shadow-sm transition-all cursor-pointer"
                   >
                     {lang === "th" ? "เริ่มคาบเรียน" : "Start Class"}
                   </button>
@@ -174,7 +174,7 @@ export default function SmartDashboard({
         <div className="p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] space-y-5 flex flex-col justify-between">
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <CheckSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <CheckSquare className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               {lang === "th" ? "ภารกิจที่ต้องดำเนินการ" : "Action Checklist"}
             </h3>
             <div className="space-y-4">
@@ -204,7 +204,7 @@ export default function SmartDashboard({
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80">
             <button 
               onClick={() => onNavigate("Academic", "attendance")}
-              className="w-full py-2.5 rounded-lg border border-indigo-200/50 bg-indigo-50/40 hover:bg-indigo-100/50 text-indigo-650 dark:border-indigo-900/30 dark:bg-indigo-950/20 dark:text-indigo-400 dark:hover:bg-indigo-950/40 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2.5 rounded-lg border border-amber-200/50 bg-amber-50/40 hover:bg-amber-100/50 text-[#2d2d2d] dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-400 dark:hover:bg-amber-950/40 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5" />
               {lang === "th" ? "เช็คชื่อนักเรียน ม.6/1" : "Start Morning Attendance"}
@@ -229,7 +229,7 @@ export default function SmartDashboard({
               {lang === "th" ? "อัตราเข้าเรียนวันนี้" : "Attendance Rate Today"}
             </span>
             <div className="mt-auto flex items-baseline gap-2">
-              <p className="text-5xl font-black tracking-tight text-indigo-650 dark:text-indigo-400 leading-none">96.8%</p>
+              <p className="text-5xl font-black tracking-tight text-[#2d2d2d] dark:text-amber-400 leading-none">96.8%</p>
               <span className="text-xs text-emerald-600 font-bold flex items-center gap-0.5">
                 <TrendingUp className="w-3 h-3" />
                 +0.5%
@@ -299,7 +299,7 @@ export default function SmartDashboard({
         {/* Pending leave approvals list */}
         <div className="lg:col-span-2 p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] space-y-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <CheckCircle2 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             {lang === "th" ? "เอกสารคำขอรอการพิจารณา" : "Pending Request Approval"}
           </h3>
           <div className="space-y-3">
@@ -307,7 +307,7 @@ export default function SmartDashboard({
               pendingLeaves.map((request) => (
                 <div key={request.id} className="p-4 rounded-xl border border-slate-50 dark:border-slate-900 bg-slate-50/20 dark:bg-slate-950/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all duration-300 hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
                   <div>
-                    <span className="text-[9px] px-2.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 font-bold border border-indigo-500/15">{request.leaveType}</span>
+                    <span className="text-[9px] px-2.5 py-0.5 rounded-md bg-amber-500/10 text-[#2d2d2d] dark:text-amber-400 font-bold border border-amber-500/15">{request.leaveType}</span>
                     <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-2">{request.requesterName}</h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{lang === "th" ? `เหตุผล: ${request.reason}` : `Reason: ${request.reason}`}</p>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">{lang === "th" ? `วันที่: ${request.startDate} ถึง ${request.endDate}` : `Dates: ${request.startDate} to ${request.endDate}`}</p>
@@ -315,7 +315,7 @@ export default function SmartDashboard({
                   <div className="flex gap-2">
                     <button 
                       onClick={() => onApproveRequest(request.id, "APPROVED")}
-                      className="bg-indigo-650 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                      className="bg-[#2d2d2d] hover:bg-[#3a3a3a] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer"
                     >
                       {lang === "th" ? "อนุมัติ" : "Approve"}
                     </button>
@@ -363,7 +363,7 @@ export default function SmartDashboard({
           </div>
           <button 
             onClick={() => onNavigate("Analytics", "risk")}
-            className="w-full text-center text-xs font-bold text-indigo-650 dark:text-indigo-400 hover:underline flex items-center justify-center gap-1 pt-3 border-t border-slate-100 dark:border-slate-800/80 cursor-pointer"
+            className="w-full text-center text-xs font-bold text-[#2d2d2d] dark:text-amber-400 hover:underline flex items-center justify-center gap-1 pt-3 border-t border-slate-100 dark:border-slate-800/80 cursor-pointer"
           >
             <span>{lang === "th" ? "แผนช่วยเหลือทั้งหมด" : "View Assistance Programs"}</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -404,7 +404,7 @@ export default function SmartDashboard({
               {lang === "th" ? "ชั้นเรียนของข้าพเจ้า" : "Active School Room"}
             </span>
             <div className="mt-auto">
-              <p className="text-sm font-extrabold text-indigo-650 dark:text-indigo-400 leading-tight">
+              <p className="text-sm font-extrabold text-[#2d2d2d] dark:text-amber-400 leading-tight">
                 {lang === "th" ? "ระดับชั้น มัธยมศึกษาปีที่ 6/1" : "Grade 12 / Room 1"}
               </p>
               <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold block mt-2">
@@ -457,7 +457,7 @@ export default function SmartDashboard({
         {/* Today's schedule */}
         <div className="lg:col-span-2 p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] space-y-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             {lang === "th" ? "ตารางเรียนของฉันวันนี้" : "My Timetable Today"}
           </h3>
           <div className="space-y-3">
@@ -482,7 +482,7 @@ export default function SmartDashboard({
         {/* Homework list */}
         <div className="p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] space-y-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <CheckSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <CheckSquare className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             {lang === "th" ? "การบ้านค้างส่ง" : "My Homework List"}
           </h3>
           <div className="space-y-3">
@@ -541,7 +541,7 @@ export default function SmartDashboard({
               {`${lang === "th" ? "โครงสร้างตารางฐานข้อมูล" : "Database Models Overview"}`}
             </span>
             <div className="mt-auto">
-              <p className="text-sm font-extrabold text-indigo-650 dark:text-indigo-400 leading-tight">
+              <p className="text-sm font-extrabold text-[#2d2d2d] dark:text-amber-400 leading-tight">
                 {`${lang === "th" ? "ระบบเชื่อมโยงหลัก: 42 ตาราง" : "Core Engines: 42 Models Connected"}`}
               </p>
               <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold block mt-2">
@@ -593,7 +593,7 @@ export default function SmartDashboard({
         {/* System setup status */}
         <div className="lg:col-span-2 p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] space-y-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <Database className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             {lang === "th" ? "ระบบจัดการคอร์หลัก" : "Core Platform System Engines"}
           </h3>
           <div className="space-y-3">
@@ -620,7 +620,7 @@ export default function SmartDashboard({
         {/* Setup parameters */}
         <div className="p-6 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card shadow-[0_2px_12px_rgba(0,0,0,0.015)] space-y-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Activity className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <Activity className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             {lang === "th" ? "ข้อมูลภาคการเรียน" : "Semester Configuration"}
           </h3>
           <div className="space-y-4 text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -644,7 +644,7 @@ export default function SmartDashboard({
             </div>
             <button 
               onClick={() => onNavigate("Admin", "setup")}
-              className="w-full text-center text-xs font-bold text-indigo-650 dark:text-indigo-400 hover:underline mt-2 cursor-pointer"
+              className="w-full text-center text-xs font-bold text-[#2d2d2d] dark:text-amber-400 hover:underline mt-2 cursor-pointer"
             >
               {lang === "th" ? "ตั้งค่าภาคเรียนระบบหลัก" : "Configure Terms & Classes"}
             </button>

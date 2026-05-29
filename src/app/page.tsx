@@ -504,14 +504,14 @@ export default function Workspace() {
 
 
   return (
-    <div className={`flex-1 flex overflow-hidden min-h-screen bg-background relative text-foreground ${lang === 'th' ? 'font-th' : 'font-en'}`}>
+    <div className={`flex-1 flex overflow-hidden min-h-screen bg-warm-gradient relative text-foreground ${lang === 'th' ? 'font-th' : 'font-en'}`}>
       
       {/* 🚀 SIDEBAR PRINCIPAL - SLEEK VERTICAL ICON BAR */}
-      <aside className="hidden md:flex flex-col w-20 border-r border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 items-center py-6 justify-between z-20 shrink-0">
+      <aside className="hidden md:flex flex-col w-22 glass-premium shadow-premium items-center py-8 justify-between z-20 shrink-0 relative" style={{ borderRight: '1px solid rgba(255,255,255,0.4)' }}>
         
         {/* Brand Profile Element */}
         <div className="flex flex-col items-center gap-6 w-full">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-650 to-indigo-800 flex items-center justify-center shadow-md shadow-indigo-600/10 cursor-pointer hover:scale-105 transition-transform" title="School OS - โรงเรียนคุชปะชาสรรค์">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-md shadow-amber-500/20 cursor-pointer hover:scale-105 transition-transform" title="School OS - โรงเรียนคุชปะชาสรรค์">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
 
@@ -535,10 +535,10 @@ export default function Workspace() {
                     else if (item.name === "Engagement") setActiveSubTab("line");
                     addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
                   }}
-                  className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 relative group cursor-pointer ${
+                  className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 relative group cursor-pointer hover:scale-[1.05] ${
                     isActive 
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-md shadow-slate-900/10 scale-105" 
-                      : "text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                      ? "bg-[#2d2d2d] text-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] dark:bg-amber-500 dark:text-[#2d2d2d]" 
+                      : "text-[#6b6b6b] hover:text-[#1e1e1e] dark:text-slate-400 dark:hover:text-white hover:bg-amber-500/10"
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -565,10 +565,10 @@ export default function Workspace() {
                     else if (item.name === "Admin") setActiveSubTab("rules");
                     addAuditLog("SIDEBAR_CLICK", `คลิกเมนูแอดมิน: ${item.name}`);
                   }}
-                  className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 relative group cursor-pointer ${
+                  className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 relative group cursor-pointer hover:scale-[1.05] ${
                     isActive 
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-md shadow-slate-900/10 scale-105" 
-                      : "text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                      ? "bg-primary text-primary-foreground shadow-premium" 
+                      : "text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-900/50"
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -582,10 +582,10 @@ export default function Workspace() {
 
             <a
               href="/eleave"
-              className="w-11 h-11 flex items-center justify-center rounded-xl text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all group relative"
+              className="w-12 h-12 flex items-center justify-center rounded-2xl text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 hover:scale-[1.05] transition-all group relative"
             >
-              <FileText className="w-5 h-5 text-indigo-500" />
-              <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-indigo-650 text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+              <FileText className="w-5 h-5" />
+              <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-[#2d2d2d] text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                 {lang === "th" ? "โปรไฟล์และใบลา" : "Leave & Profile"}
               </div>
             </a>
@@ -594,7 +594,7 @@ export default function Workspace() {
 
         {/* User Account / Sign Out Section */}
         <div className="flex flex-col items-center gap-4 w-full">
-          <div className="w-9 h-9 rounded-full border-2 border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0 cursor-pointer shadow-sm hover:scale-105 transition-all group relative">
+          <div className="w-9 h-9 rounded-full border-2 border-amber-200 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold text-xs flex items-center justify-center shrink-0 cursor-pointer shadow-sm hover:scale-105 transition-all group relative">
             {activeSession.user.name ? activeSession.user.name.charAt(0).toUpperCase() : "U"}
             <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-850 text-white text-[10px] font-semibold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg leading-tight">
               {activeSession.user.name}
@@ -609,7 +609,7 @@ export default function Workspace() {
               await signOut();
               router.push("/login");
             }}
-            className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all cursor-pointer group relative"
+            className="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:scale-[1.05] transition-all cursor-pointer group relative"
           >
             <LogOut className="w-5 h-5" />
             <div className="absolute left-16 px-2.5 py-1.5 rounded-lg bg-rose-650 text-white text-[10px] font-bold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
@@ -623,7 +623,7 @@ export default function Workspace() {
       <div className="flex-1 flex flex-col overflow-hidden">
         
         {/* top header bar */}
-        <header className="h-16 border-b border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 px-6 flex items-center justify-between z-10 shrink-0">
+        <header className="h-18 glass-premium px-6 flex items-center justify-between z-10 shrink-0 relative" style={{ borderBottom: '1px solid rgba(255,255,255,0.4)' }}>
           
           {/* Greeting with username & Subtitle from Mockup */}
           <div className="flex items-center gap-3">
@@ -724,18 +724,18 @@ export default function Workspace() {
           {/* ==================== 1. HOME VIEW ==================== */}
           {activeMenu === "Home" && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 p-4 rounded-2xl border border-primary/10">
-                <div>
-                  <h2 className="text-base font-bold text-foreground flex items-center gap-1.5">
-                    <Sparkles className="w-5 h-5 text-primary animate-spin" />
+              <div className="profile-card-warm p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="relative z-10">
+                  <h2 className="text-base font-bold text-[#1e1e1e] flex items-center gap-1.5">
+                    <Sparkles className="w-5 h-5 text-amber-600" />
                     สวัสดีครับ, ยินดีต้อนรับกลับสู่ระบบ School OS
                   </h2>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-[#6b6b6b] mt-1">
                     ระบบวิเคราะห์อัจฉริยะประมวลผลข้อมูลล่าสุดเมื่อ: <span className="font-semibold" suppressHydrationWarning>{new Date().toLocaleTimeString()}</span> ของวันนี้
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary text-white shadow-sm shadow-indigo-600/15 capitalize">
+                <div className="flex items-center gap-2 relative z-10">
+                  <span className="stat-pill stat-pill-dark capitalize">
                     Role: {role}
                   </span>
                 </div>
@@ -766,7 +766,7 @@ export default function Workspace() {
                 <button 
                   onClick={() => setActiveSubTab("students")}
                   className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "students" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
+                    activeSubTab === "students" ? "border-[#2d2d2d] dark:border-amber-400 text-[#1e1e1e] dark:text-amber-400" : "border-transparent text-muted-foreground"
                   }`}
                 >
                   ฐานข้อมูลนักเรียน (Students)
@@ -774,7 +774,7 @@ export default function Workspace() {
                 <button 
                   onClick={() => setActiveSubTab("teachers")}
                   className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "teachers" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
+                    activeSubTab === "teachers" ? "border-[#2d2d2d] dark:border-amber-400 text-[#1e1e1e] dark:text-amber-400" : "border-transparent text-muted-foreground"
                   }`}
                 >
                   รายชื่อครูและบุคลากร (Teachers)
@@ -782,7 +782,7 @@ export default function Workspace() {
                 <button 
                   onClick={() => setActiveSubTab("health")}
                   className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "health" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
+                    activeSubTab === "health" ? "border-[#2d2d2d] dark:border-amber-400 text-[#1e1e1e] dark:text-amber-400" : "border-transparent text-muted-foreground"
                   }`}
                 >
                   ห้องพยาบาลโรงเรียน (Health Center)
@@ -2279,7 +2279,7 @@ export default function Workspace() {
       )}
 
       {/* 📱 PERSISTENT MOBILE BOTTOM NAVBAR */}
-      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-900 flex items-center justify-around z-40 shadow-[0_-4px_16px_rgba(0,0,0,0.02)] md:hidden px-2">
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-t border-premium flex items-center justify-around z-40 shadow-premium md:hidden px-2">
         {sidebarMainItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeMenu === item.name;

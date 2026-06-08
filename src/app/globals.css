@@ -96,7 +96,7 @@
   --chart-4: #FBBF24;       /* Orange */
   --chart-5: #FB7185;       /* Pink */
 
-  --radius: 1.5rem;
+  --radius: 0.75rem;
 
   --sidebar: rgba(255, 255, 255, 0.65);
   --sidebar-foreground: #6B7280;
@@ -207,7 +207,7 @@
   backdrop-filter: blur(16px) saturate(120%);
   -webkit-backdrop-filter: blur(16px) saturate(120%);
   border: 1px solid rgba(255, 255, 255, 1);
-  border-radius: 1.5rem !important;
+  border-radius: 0.625rem !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02), inset 0 2px 4px rgba(255, 255, 255, 0.4) !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -222,7 +222,7 @@
   backdrop-filter: blur(16px) saturate(130%);
   -webkit-backdrop-filter: blur(16px) saturate(130%);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 1.5rem !important;
+  border-radius: 0.625rem !important;
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.3),
     0 20px 48px rgba(0, 0, 0, 0.2) !important;
@@ -296,4 +296,8 @@
 
 .page-content {
   animation: fadeIn 0.3s ease-in-out;
+}
+
+.sidebar-dark {
+  background: linear-gradient(180deg, #1A2333 0%, #121A26 100%) !important;
 }

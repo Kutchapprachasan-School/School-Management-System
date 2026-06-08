@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { 
-  Home, Users, BookOpen, Settings, MessageSquare, BarChart3, ShieldAlert,
+  Home, Users, BookOpen, Heart, Settings, MessageSquare, BarChart3, ShieldAlert,
   Search, Moon, Sun, Bell, AlertTriangle, Plus, CheckCircle2, X, Trash2, 
   Send, Hammer, HelpCircle, FileText, Calendar, Clock, Star, Edit3, ArrowRight,
   UserCheck, Sparkles, LogOut, CheckSquare, Award, Play, ChevronRight, FileCode, GraduationCap,
-  Menu, LayoutDashboard, History, FileSpreadsheet, Activity, UserCircle, ChevronDown
+  Menu, LayoutDashboard, History, FileSpreadsheet, Activity, UserCircle, ChevronDown,
+  Mail, ShoppingCart
 } from "lucide-react";
 
 import { Student, Teacher, LeaveRequest, HealthVisit, TimelineEvent, NotificationItem, AuditLogItem, UserRole } from "@/types/school-os";
@@ -14,28 +15,35 @@ import { initialStudents, initialTeachers, initialLeaveRequests, initialHealthVi
 import CommandPalette from "@/components/CommandPalette";
 import TimelineEngine from "@/components/TimelineEngine";
 import SmartDashboard from "@/components/SmartDashboard";
+import StudentDetailModal from "@/components/StudentDetailModal";
 
 import { useSession, signOut } from "@/lib/auth-client";
 import { useI18n } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 
 // Import integrated eLeave sub-pages
-import DashboardPage from "./eleave/dashboard/page";
-import RequestLeavePage from "./eleave/request/page";
-import HistoryPage from "./eleave/history/page";
-import ApprovalsPage from "./eleave/approvals/page";
-import ReportsPage from "./eleave/reports/page";
-import SettingsPage from "./eleave/settings/page";
-import UsersLeavePage from "./eleave/users/page";
-import LogsLeavePage from "./eleave/logs/page";
 import ProfilePage from "./eleave/profile/page";
+import LeaveView from "@/components/modules/LeaveView";
+import TimetableView from "@/components/modules/TimetableView";
 import { ScheduleGrid } from "@/components/timetable/ScheduleGrid";
 import SubstitutionTab from "@/components/timetable/SubstitutionTab";
+import StudentCareView from "@/components/modules/StudentCareView";
+import ReportsView from "@/components/modules/ReportsView";
+import EngagementView from "@/components/modules/EngagementView";
+import AcademicCalendar from "@/components/modules/academic/AcademicCalendar";
 
 // Import real database actions
 import { getSystemInitialData } from "@/app/actions/init";
 import { createSubject, deleteSubject } from "@/app/actions/subject";
 import { createClassroom, deleteClassroom } from "@/app/actions/classroom";
+import { getSubjectAttendance, saveSubjectAttendance, getClassroomSchedulesForDay } from "@/app/actions/attendance";
+import { getRooms } from "@/app/actions/room";
+
+// Import global settings & backup actions
+import { getSystemSettings, updateSystemSettings, updateFooter, generateBackup } from "@/app/actions/settings";
+import { uploadLogo } from "@/app/actions/upload";
+import { importBackupFromJson } from "@/app/actions/archive";
+import { UploadCloud, DownloadCloud, Image as ImageIcon } from "lucide-react";
 
 export default function Workspace() {
   const { data: session, isPending } = useSession();
@@ -50,10 +58,169 @@ export default function Workspace() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
-  const [eleaveSubTab, setEleaveSubTab] = useState<"dashboard" | "form" | "history" | "approvals" | "reports" | "settings">("dashboard");
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [activeFloatingMenu, setActiveFloatingMenu] = useState<string | null>(null);
+  const [eleaveSubTab, setEleaveSubTab] = useState<"dashboard" | "form" | "history" | "approvals" | "reports" | "settings" | "users" | "logs">("dashboard");
+  const [timetableViewSubTab, setTimetableViewSubTab] = useState<string>("dashboard");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [eleaveExpanded, setEleaveExpanded] = useState(false);
+
+  // Dynamic branding from SystemSettings
+  const [schoolName, setSchoolName] = useState("School OS");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [subheader, setSubheader] = useState("Management");
+  const [footerText, setFooterText] = useState("© 2006 Panchapon Getrat KP-school");
+  const [lineChannelAccessToken, setLineChannelAccessToken] = useState("");
+  const [lineTargetGroupId, setLineTargetGroupId] = useState("");
+  const [leaveRules, setLeaveRules] = useState("");
+  const [developerSecret, setDeveloperSecret] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSavingGeneral, setIsSavingGeneral] = useState(false);
+  const [isSavingFooter, setIsSavingFooter] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  useEffect(() => {
+    getSystemSettings().then((s) => {
+      setSchoolName(s.schoolName || "School OS");
+      setLogoUrl(s.logoUrl || null);
+      setSubheader(s.subheader || "Management");
+      setFooterText(s.footerText || "© 2006 Panchapon Getrat KP-school");
+      setLineChannelAccessToken(s.lineChannelAccessToken || "");
+      setLineTargetGroupId(s.lineTargetGroupId || "");
+      setLeaveRules(s.leaveRules || "");
+    }).catch(() => { });
+  }, []);
+
+  const handleGeneralSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingGeneral(true);
+    try {
+      await updateSystemSettings({ 
+        schoolName, 
+        subheader, 
+        logoUrl: logoUrl || "", 
+        lineChannelAccessToken, 
+        lineTargetGroupId, 
+        leaveRules 
+      });
+      triggerToast("💾 บันทึกสำเร็จ", "บันทึกการตั้งค่าเอกลักษณ์โรงเรียนเรียบร้อยแล้ว");
+      addAuditLog("UPDATE_SYSTEM_SETTINGS", `แก้ไขเอกลักษณ์โรงเรียน: ${schoolName}`);
+    } catch (error: any) {
+      triggerToast("❌ เกิดข้อผิดพลาด", error?.message || "ไม่สามารถบันทึกได้");
+    } finally {
+      setIsSavingGeneral(false);
+    }
+  };
+
+  const handleFooterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingFooter(true);
+    try {
+      await updateFooter({ footerText, developerSecret });
+      triggerToast("💾 อัปเดตสำเร็จ", "อัปเดต Footer สำเร็จ");
+      addAuditLog("UPDATE_FOOTER", "แก้ไขข้อความส่วนท้าย (Footer)");
+      setDeveloperSecret(""); // Clear secret after success
+    } catch (error: any) {
+      triggerToast("❌ ข้อผิดพลาด", error.message === "Invalid Developer Secret" ? "รหัสลับนักพัฒนาไม่ถูกต้อง!" : "เกิดข้อผิดพลาดในการบันทึก");
+    } finally {
+      setIsSavingFooter(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("logo", e.target.files[0]);
+
+    try {
+      const res = await uploadLogo(formData);
+      if (res.success && res.url) {
+        setLogoUrl(res.url);
+        triggerToast("🖼️ อัปโหลดโลโก้สำเร็จ", "โปรดกดปุ่มบันทึกเพื่อบันทึกการตั้งค่าทั้งหมด");
+      }
+    } catch (error) {
+      triggerToast("❌ อัปโหลดล้มเหลว", "ไม่สามารถอัปโหลดโลโก้ได้");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleBackup = async () => {
+    setIsBackingUp(true);
+    try {
+      const backupString = await generateBackup();
+      const blob = new Blob([backupString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `school-os-backup-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      triggerToast("📥 สำรองข้อมูลสำเร็จ", "ดาวน์โหลดไฟล์สำรองข้อมูลเรียบร้อยแล้ว");
+      addAuditLog("EXPORT_BACKUP", "ดาวน์โหลดไฟล์สำรองระบบทั้งหมด");
+    } catch (error) {
+      triggerToast("❌ สำรองข้อมูลล้มเหลว", "เกิดข้อผิดพลาดขณะสร้างไฟล์สำรองข้อมูล");
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm("คำเตือน: การนำเข้าข้อมูลสำรองจะลบการตั้งค่าปัจจุบันและเขียนทับใหม่ทั้งหมด ต้องการดำเนินการต่อหรือไม่?")) {
+      e.target.value = "";
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const jsonString = event.target?.result as string;
+          const res = await importBackupFromJson(jsonString);
+          if (res.success) {
+            triggerToast("📤 นำเข้าข้อมูลสำเร็จ", "กู้คืนระบบจากการตั้งค่าจากไฟล์สำรองข้อมูลเรียบร้อยแล้ว");
+            addAuditLog("IMPORT_BACKUP", "กู้คืนระบบจากไฟล์สำรองข้อมูล");
+            window.location.reload();
+          }
+        } catch (err: any) {
+          triggerToast("❌ นำเข้าข้อมูลล้มเหลว", err.message || "รูปแบบไฟล์ไม่ถูกต้อง");
+        }
+      };
+      reader.readAsText(file);
+    } catch (error) {
+      triggerToast("❌ นำเข้าข้อมูลล้มเหลว", "เกิดข้อผิดพลาดในการอ่านไฟล์");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Click tracking tracker
+  useEffect(() => {
+    if (typeof window !== "undefined" && activeMenu) {
+      const key = `${activeMenu}-${activeSubTab || "dashboard"}`;
+      const validKeys = [
+        "Home-dashboard", "People-students", "People-teachers", "People-health",
+        "Academic-attendance", "Academic-teaching", "Academic-assessment",
+        "StudentCare-dashboard", "eleave-dashboard", "eleave-approvals",
+        "eleave-form", "Admin-rules", "Analytics-risk"
+      ];
+      if (validKeys.includes(key)) {
+        const clickCounts = JSON.parse(localStorage.getItem("shortcut_click_counts") || "{}");
+        clickCounts[key] = (clickCounts[key] || 0) + 1;
+        localStorage.setItem("shortcut_click_counts", JSON.stringify(clickCounts));
+      }
+    }
+  }, [activeMenu, activeSubTab]);
 
   // Redirect to login if session is null
   useEffect(() => {
@@ -73,6 +240,8 @@ export default function Workspace() {
         if (menu === "eleave" && tab) {
           setEleaveSubTab(tab as any);
           setEleaveExpanded(true);
+        } else if (menu === "timetables" && tab) {
+          setTimetableViewSubTab(tab);
         }
       }
     }
@@ -103,6 +272,157 @@ export default function Workspace() {
 
   const [loadingDb, setLoadingDb] = useState(true);
 
+  // Timetable Scheduler States
+  const [viewMode, setViewMode] = useState<"classroom" | "teacher" | "room">("classroom");
+  const [viewId, setViewId] = useState<string>("");
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string>("");
+  const [selectedRoomId, setSelectedRoomId] = useState<string>("");
+  const [paletteTab, setPaletteTab] = useState<"workloads" | "subjects">("workloads");
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [periods, setPeriods] = useState<any[]>([]);
+  const [workloads, setWorkloads] = useState<any[]>([]);
+
+  // Attendance Mode State (homeroom vs subject)
+  const [attendanceMode, setAttendanceMode] = useState<"homeroom" | "subject">("homeroom");
+
+  // Subject Attendance States
+  const [attDate, setAttDate] = useState<string>(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
+  const [attClassroom, setAttClassroom] = useState<string>("");
+  const [attSchedules, setAttSchedules] = useState<any[]>([]);
+  const [attSelectedScheduleId, setAttSelectedScheduleId] = useState<string>("");
+  const [attLoadingSchedules, setAttLoadingSchedules] = useState<boolean>(false);
+  const [attSaving, setAttSaving] = useState<boolean>(false);
+  const [attRecords, setAttRecords] = useState<Record<string, string>>({});
+
+  // Fetch schedules when classroom or date changes
+  useEffect(() => {
+    async function loadSchedules() {
+      if (!attClassroom || !attDate) {
+        setAttSchedules([]);
+        setAttSelectedScheduleId("");
+        setAttRecords({});
+        return;
+      }
+
+      setAttLoadingSchedules(true);
+      setAttSelectedScheduleId("");
+      setAttRecords({});
+
+      try {
+        const dateVal = new Date(attDate);
+        const dayOfWeek = dateVal.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+        
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          setAttSchedules([]);
+          setAttLoadingSchedules(false);
+          return;
+        }
+
+        const res = await getClassroomSchedulesForDay(attClassroom, dayOfWeek);
+        if (res.success && res.data) {
+          setAttSchedules(res.data);
+        } else {
+          setAttSchedules([]);
+          triggerToast("❌ ดึงข้อมูลตารางเรียนล้มเหลว", res.error || "เกิดข้อผิดพลาด");
+        }
+      } catch (err: any) {
+        console.error(err);
+        triggerToast("❌ ข้อผิดพลาด", err.message || "เกิดข้อผิดพลาด");
+      } finally {
+        setAttLoadingSchedules(false);
+      }
+    }
+
+    loadSchedules();
+  }, [attClassroom, attDate]);
+
+  // Load attendance records when schedule is selected
+  useEffect(() => {
+    async function loadAttendance() {
+      if (!attSelectedScheduleId || !attClassroom || !attDate) {
+        return;
+      }
+
+      const schedule = attSchedules.find(s => s.id === attSelectedScheduleId);
+      if (!schedule) return;
+
+      try {
+        const classroom = classroomsList.find(c => c.name === attClassroom);
+        if (!classroom) return;
+
+        const res = await getSubjectAttendance(
+          classroom.id,
+          schedule.subjectId,
+          schedule.periodId,
+          attDate
+        );
+
+        const classroomStudents = students.filter(s => s.classroom === attClassroom);
+        const defaultRecords: Record<string, string> = {};
+        classroomStudents.forEach(s => {
+          defaultRecords[s.id] = "present";
+        });
+
+        if (res.success && res.data && res.data.records) {
+          setAttRecords({
+            ...defaultRecords,
+            ...res.data.records
+          });
+        } else {
+          setAttRecords(defaultRecords);
+        }
+      } catch (err: any) {
+        console.error(err);
+        triggerToast("❌ โหลดบันทึกเข้าเรียนล้มเหลว", err.message || "เกิดข้อผิดพลาด");
+      }
+    }
+
+    loadAttendance();
+  }, [attSelectedScheduleId, attClassroom, attDate, attSchedules, classroomsList, students]);
+
+  const handleSaveSubjectAttendance = async () => {
+    if (!attSelectedScheduleId || !attClassroom || !attDate) {
+      triggerToast("⚠️ คำเตือน", "กรุณาเลือกข้อมูลให้ครบถ้วน");
+      return;
+    }
+
+    const schedule = attSchedules.find(s => s.id === attSelectedScheduleId);
+    if (!schedule) return;
+
+    const classroom = classroomsList.find(c => c.name === attClassroom);
+    if (!classroom) return;
+
+    setAttSaving(true);
+    try {
+      const res = await saveSubjectAttendance(
+        classroom.id,
+        schedule.subjectId,
+        schedule.periodId,
+        attDate,
+        attRecords
+      );
+
+      if (res.success) {
+        triggerToast("💾 บันทึกเวลาเรียนสำเร็จ", `บันทึกข้อมูลวิชา ${schedule.subject.name} เรียบร้อยแล้ว`);
+        addAuditLog("UPDATE_SUBJECT_ATTENDANCE", `บันทึกเวลาเรียน ห้อง ${attClassroom} คาบ ${schedule.period.name}`);
+      } else {
+        triggerToast("❌ บันทึกเวลาเรียนล้มเหลว", res.error || "เกิดข้อผิดพลาด");
+      }
+    } catch (err: any) {
+      console.error(err);
+      triggerToast("❌ ข้อผิดพลาด", err.message || "เกิดข้อผิดพลาด");
+    } finally {
+      setAttSaving(false);
+    }
+  };
+
   const refreshDbData = async () => {
     try {
       const res = await getSystemInitialData();
@@ -119,8 +439,14 @@ export default function Workspace() {
         if (res.data.classrooms.length > 0) {
           setClassroomsList(res.data.classrooms);
         }
+        if ((res.data as any).students && (res.data as any).students.length > 0) {
+          setStudents((res.data as any).students as any);
+        }
         if (res.data.logs.length > 0) {
           setAuditLogs(res.data.logs as any);
+        }
+        if (res.data.periods && res.data.periods.length > 0) {
+          setPeriods(res.data.periods);
         }
       }
     } catch (err) {
@@ -132,10 +458,57 @@ export default function Workspace() {
     async function loadData() {
       setLoadingDb(true);
       await refreshDbData();
+      try {
+        const roomsRes = await getRooms();
+        if (roomsRes.success && roomsRes.data) {
+          setRooms(roomsRes.data);
+        }
+      } catch (err) {
+        console.error("Failed to load rooms:", err);
+      }
       setLoadingDb(false);
     }
     loadData();
   }, []);
+
+  // Sync timetable viewId when viewMode changes
+  useEffect(() => {
+    if (viewMode === "classroom" && classroomsList.length > 0) {
+      setViewId(classroomsList[0].id);
+      setSelectedClassroomId(classroomsList[0].id);
+    } else if (viewMode === "teacher" && teachers.length > 0) {
+      setViewId(teachers[0].id);
+      setSelectedTeacherId(teachers[0].id);
+    } else if (viewMode === "room" && rooms.length > 0) {
+      setViewId(rooms[0].id);
+      setSelectedRoomId(rooms[0].id);
+    } else {
+      setViewId("");
+    }
+  }, [viewMode, classroomsList, teachers, rooms]);
+
+  const handleDragStart = (e: React.DragEvent, sub: any) => {
+    const isAdmin = role === "admin" || activeSession?.user?.email === "admin@school.os";
+    if (!isAdmin) return;
+    e.dataTransfer.setData("application/json", JSON.stringify({
+      type: "subject",
+      subjectId: sub.id,
+      subjectCode: sub.code,
+      roomId: selectedRoomId
+    }));
+  };
+
+  const handleDragStartWorkload = (e: React.DragEvent, wl: any) => {
+    const isAdmin = role === "admin" || activeSession?.user?.email === "admin@school.os";
+    if (!isAdmin) return;
+    e.dataTransfer.setData("application/json", JSON.stringify({
+      type: "subject",
+      subjectId: wl.subjectId,
+      subjectCode: wl.subjectCode,
+      roomId: wl.roomId || selectedRoomId,
+      userId: wl.userId
+    }));
+  };
 
   const handleAddSubject = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -205,7 +578,7 @@ export default function Workspace() {
       subjectGroup: "วิทยาศาสตร์และเทคโนโลยี"
     }
   };
-  const activeSession = session || mockSession;
+  const activeSession = (session || mockSession) as any;
 
   // Sync role and route permissions from live Better Auth session or fallback
   useEffect(() => {
@@ -219,7 +592,7 @@ export default function Workspace() {
         setRole("teacher");
       }
     }
-  }, [activeSession?.user?.id, activeSession?.user?.role, activeSession?.user?.position]);
+  }, [(activeSession?.user as any)?.id, (activeSession?.user as any)?.role, (activeSession?.user as any)?.position]);
 
   // Forms / Operations States
   const [showToast, setShowToast] = useState(false);
@@ -520,6 +893,8 @@ export default function Workspace() {
     { name: "Home", icon: Home, label: lang === "th" ? "แดชบอร์ด" : "Dashboard" },
     { name: "People", icon: Users, label: lang === "th" ? "ฐานข้อมูลคน" : "People" },
     { name: "Academic", icon: BookOpen, label: lang === "th" ? "วิชาการ" : "Academics" },
+    { name: "timetables", icon: Calendar, label: lang === "th" ? "จัดตารางสอน" : "Timetables" },
+    { name: "StudentCare", icon: Heart, label: lang === "th" ? "เยี่ยมบ้าน นร.01" : "Home Visit" },
     { name: "Operations", icon: Settings, label: lang === "th" ? "ดำเนินงาน" : "Operations" },
     { name: "Engagement", icon: MessageSquare, label: lang === "th" ? "สื่อสาร" : "Engagement" },
     { name: "Reports", icon: FileText, label: lang === "th" ? "รายงาน" : "Reports" },
@@ -552,316 +927,431 @@ export default function Workspace() {
   return (
     <div className={`flex-1 flex overflow-hidden min-h-screen bg-background relative text-foreground ${lang === 'th' ? 'font-th' : 'font-en'}`}>
       
-      {/* 🚀 COLLAPSIBLE DESKTOP SIDEBAR */}
+      {/* 🚀 COLLAPSIBLE DESKTOP SIDEBAR — Dark Gradient */}
       <aside 
-        className={`hidden md:flex flex-col h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 transition-all duration-300 z-20 shrink-0 relative shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${
-          sidebarOpen ? "w-64 px-4 py-6" : "w-0 opacity-0 overflow-hidden border-r-0"
+        className={`hidden md:flex flex-col h-screen sidebar-dark border-r border-white/[0.06] transition-all duration-300 z-20 shrink-0 relative shadow-[4px_0_24px_rgba(0,0,0,0.15)] justify-between py-5 ${
+          sidebarOpen ? "w-[238px]" : "w-16 px-1"
         }`}
       >
         {/* Brand / Logo */}
-        {sidebarOpen && (
-          <div className="h-16 px-4 flex items-center gap-3 mb-6 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md shadow-primary/20">
-              <GraduationCap className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-3 px-4 w-full shrink-0 md:justify-start justify-center">
+          {logoUrl ? (
+            <img 
+              onClick={() => {
+                setActiveMenu("Home");
+                setActiveSubTab("dashboard");
+              }}
+              src={logoUrl} 
+              alt="Logo" 
+              className="w-10 h-10 rounded-2xl object-cover hover:scale-105 transition-all cursor-pointer shadow-lg shrink-0" 
+            />
+          ) : (
+            <div 
+              onClick={() => {
+                setActiveMenu("Home");
+                setActiveSubTab("dashboard");
+              }}
+              className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-extrabold text-xl hover:scale-105 transition-all cursor-pointer shadow-lg shadow-indigo-500/20 shrink-0"
+              title="SchoolOS Portal"
+            >
+              {schoolName ? schoolName.charAt(0) : "S"}
             </div>
-            <div className="flex-1 min-w-0">
-              <span className="font-extrabold text-sm text-slate-900 dark:text-white leading-none block">SchoolOS Portal</span>
-              <span className="text-[10px] text-slate-400 font-semibold mt-1 block">โรงเรียนคุชปะชาสรรค์</span>
+          )}
+          {sidebarOpen && (
+            <div className="flex flex-col animate-in fade-in duration-200 min-w-0">
+              <span className="font-extrabold text-sm text-white/95 leading-none truncate">{schoolName || "School OS"}</span>
+              <span className="text-[9px] text-white/40 font-bold uppercase mt-1 tracking-wider truncate">{subheader || "Management"}</span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Scrollable Navigation Area */}
-        {sidebarOpen && (
-          <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pr-1">
-            <p className="px-4 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              {lang === "th" ? "เมนูหลัก" : "Main Menu"}
-            </p>
-            
-            {sidebarMainItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeMenu === item.name;
-              
-              if (item.isExpandable) {
-                return (
-                  <div key={item.name} className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => setEleaveExpanded(prev => !prev)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-[14px] font-semibold transition-all group ${
-                        isActive || activeMenu === "eleave"
-                          ? "bg-primary/10 text-primary"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className="w-4.5 h-4.5" />
-                        <span>{item.label}</span>
-                      </div>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${eleaveExpanded ? "rotate-180" : ""}`} />
-                    </button>
-                    
-                    {/* Nested Submenu */}
-                    {eleaveExpanded && (
-                      <div className="pl-6 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                        {[
-                          { key: "dashboard", label: lang === "th" ? "ภาพรวม" : "Dashboard", icon: LayoutDashboard },
-                          { key: "form", label: lang === "th" ? "เขียนใบลา" : "Request Leave", icon: FileText },
-                          { key: "history", label: lang === "th" ? "ประวัติการลา" : "History", icon: History },
-                          ...(isApprover ? [{ key: "approvals", label: lang === "th" ? "รออนุมัติ" : "Approvals", icon: CheckSquare }] : []),
-                          ...(role === "admin" ? [
-                            { key: "users", label: lang === "th" ? "รายชื่อผู้ใช้" : "Users", icon: Users },
-                            { key: "logs", label: lang === "th" ? "ประวัติการใช้งาน" : "Logs", icon: Activity },
-                            { key: "reports", label: lang === "th" ? "ออกรายงาน" : "Reports", icon: FileSpreadsheet },
-                            { key: "settings", label: lang === "th" ? "ตั้งค่าระบบ" : "Settings", icon: Settings }
-                          ] : [])
-                        ].map((sub) => {
-                          const isSubActive = activeMenu === "eleave" && eleaveSubTab === sub.key;
-                          const SubIcon = sub.icon;
-                          return (
-                            <button
-                              key={sub.key}
-                              type="button"
-                              onClick={() => {
-                                setActiveMenu("eleave");
-                                setEleaveSubTab(sub.key as any);
-                                addAuditLog("SIDEBAR_CLICK", `คลิกเมนูย่อย e-Leave: ${sub.label}`);
-                              }}
-                              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${
-                                isSubActive
-                                  ? "text-primary bg-primary/5 font-semibold"
-                                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                              }`}
-                            >
-                              <SubIcon className="w-4 h-4 shrink-0" />
-                              <span>{sub.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
+        <nav className="flex-1 flex flex-col gap-1 items-stretch w-full mt-6 overflow-y-auto custom-scrollbar px-2">
+          {(() => {
+            const getSubTabs = (menuName: string) => {
+              switch (menuName) {
+                case "People":
+                  return [
+                    { key: "students", label: lang === "th" ? "ฐานข้อมูลนักเรียน" : "Students Database" },
+                    { key: "teachers", label: lang === "th" ? "รายชื่อครูอาจารย์" : "Teachers List" },
+                    { key: "health", label: lang === "th" ? "ห้องพยาบาล" : "Health Center" }
+                  ];
+                case "Academic":
+                  return [
+                    { key: "attendance", label: lang === "th" ? "เช็คชื่อเข้าแถว/คาบ" : "Attendance Tracker" },
+                    { key: "teaching", label: lang === "th" ? "ตารางจัดการสอน" : "Teaching Scheduler" },
+                    { key: "assessment", label: lang === "th" ? "ลงคะแนน ปพ.5" : "Assessment Sheet" }
+                  ];
+                case "eleave":
+                  return [
+                    { key: "dashboard", label: lang === "th" ? "ภาพรวมการลา" : "e-Leave Dashboard" },
+                    { key: "form", label: lang === "th" ? "เขียนใบลา" : "Request Leave" },
+                    { key: "history", label: lang === "th" ? "ประวัติการลา" : "Leave History" },
+                    ...(isApprover ? [{ key: "approvals", label: lang === "th" ? "พิจารณาอนุมัติใบลา" : "Leave Approvals" }] : []),
+                    ...(role === "admin" ? [
+                      { key: "logs", label: lang === "th" ? "ประวัติระบบ" : "System Logs" },
+                      { key: "reports", label: lang === "th" ? "รายงานการลา" : "Leave Reports" },
+                      { key: "settings", label: lang === "th" ? "ตั้งค่าระบบการลา" : "Leave Settings" }
+                    ] : [])
+                  ];
+                case "timetables":
+                  return [
+                    { key: "dashboard", label: lang === "th" ? "ภาพรวมตารางสอน" : "Timetable Dashboard" },
+                    { key: "schedule", label: lang === "th" ? "จัดตารางสอน" : "Scheduler Grid" },
+                    { key: "curriculums", label: lang === "th" ? "หลักสูตร" : "Curriculums" },
+                    { key: "workloads", label: lang === "th" ? "ภาระงานสอน" : "Workloads" },
+                    { key: "activities", label: lang === "th" ? "กิจกรรม/บล็อกคาบ" : "Activities" },
+                    { key: "teachers", label: lang === "th" ? "ครูผู้สอน" : "Teachers" },
+                    { key: "classrooms", label: lang === "th" ? "ชั้นเรียน" : "Classrooms" },
+                    { key: "rooms", label: lang === "th" ? "ห้องเรียน" : "Rooms" },
+                    { key: "substitutes", label: lang === "th" ? "สอนแทน" : "Substitutes" },
+                    { key: "periods", label: lang === "th" ? "คาบเรียน" : "Periods" },
+                    ...(role === "admin" ? [
+                      { key: "settings", label: lang === "th" ? "ตั้งค่าสิทธิ์" : "Timetable Settings" },
+                      { key: "backups", label: lang === "th" ? "สำรองข้อมูล" : "Backups" }
+                    ] : [])
+                  ];
+                case "Operations":
+                  return [
+                    { key: "documents", label: lang === "th" ? "รับส่งหนังสือราชการ" : "E-Signature Memo" },
+                    { key: "maintenance", label: lang === "th" ? "แจ้งซ่อม & ICT" : "Maintenance / ICT" }
+                  ];
+                case "Admin":
+                  return [
+                    { key: "rules", label: lang === "th" ? "กติกาอัตโนมัติ" : "Rule Engine" },
+                    { key: "logs", label: lang === "th" ? "ประวัติ Audit Log" : "Audit Logs" },
+                    { key: "system", label: lang === "th" ? "ตั้งค่าระบบใหญ่" : "Global Settings" }
+                  ];
+                default:
+                  return [];
               }
+            };
+
+            const renderNavItem = (item: any) => {
+              const Icon = item.icon;
+              const isActive = activeMenu === item.name || (item.name === "eleave" && activeMenu === "eleave");
+              const subtabs = getSubTabs(item.name);
+              const hasSubtabs = subtabs.length > 0;
+              const isFloatingOpen = activeFloatingMenu === item.name;
 
               return (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() => {
-                    setActiveMenu(item.name);
-                    if (item.name === "Home") setActiveSubTab("dashboard");
-                    else if (item.name === "People") setActiveSubTab("students");
-                    else if (item.name === "Academic") setActiveSubTab("attendance");
-                    else if (item.name === "Engagement") setActiveSubTab("line");
-                    else if (item.name === "Reports") setActiveSubTab("default");
-                    addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[14px] font-semibold transition-all group ${
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  <Icon className="w-4.5 h-4.5 group-hover:scale-105 transition-transform" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-
-            {/* Admin Modules block */}
-            <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80">
-              <p className="px-4 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                {lang === "th" ? "โมดูลผู้ดูแลระบบ" : "Admin Modules"}
-              </p>
-              {sidebarAdminItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeMenu === item.name;
-                return (
+                <div key={item.name} className="relative w-full group">
                   <button
-                    key={item.name}
                     type="button"
                     onClick={() => {
-                      setActiveMenu(item.name);
-                      if (item.name === "Analytics") setActiveSubTab("risk");
-                      else if (item.name === "Admin") setActiveSubTab("rules");
-                      addAuditLog("SIDEBAR_CLICK", `คลิกเมนูแอดมิน: ${item.name}`);
+                      if (item.name === "eleave") {
+                        setActiveMenu(item.name);
+                        setEleaveSubTab("dashboard");
+                        addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.label}`);
+                        return;
+                      }
+                      if (item.name === "timetables") {
+                        setActiveMenu(item.name);
+                        setTimetableViewSubTab("dashboard");
+                        addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.label}`);
+                        return;
+                      }
+                      if (!sidebarOpen && hasSubtabs) {
+                        setActiveFloatingMenu(isFloatingOpen ? null : item.name);
+                      } else {
+                        setActiveMenu(item.name);
+                        if (item.name === "Home") setActiveSubTab("dashboard");
+                        else if (item.name === "People") setActiveSubTab("students");
+                        else if (item.name === "Academic") setActiveSubTab("attendance");
+                        else if (item.name === "StudentCare") setActiveSubTab("dashboard");
+                        else if (item.name === "Engagement") setActiveSubTab("line");
+                        else if (item.name === "Reports") setActiveSubTab("default");
+                        else if (item.name === "Operations") setActiveSubTab("documents");
+                        addAuditLog("SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.label}`);
+                      }
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[14px] font-semibold transition-all group ${
+                    className={`w-full flex items-center gap-3 py-2.5 rounded-xl transition-all duration-200 ease-out cursor-pointer ${
+                      sidebarOpen ? "px-4 justify-start" : "justify-center h-11 w-11 mx-auto"
+                    } ${
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+                        ? "glow-active text-white font-bold"
+                        : "text-white/50 hover:text-white/90 hover:bg-white/[0.05]"
                     }`}
                   >
-                    <Icon className="w-4.5 h-4.5 group-hover:scale-105 transition-transform" />
-                    <span>{item.label}</span>
+                    <Icon className="w-5 h-5 shrink-0" />
+                    {sidebarOpen && <span className="text-xs font-extrabold animate-in fade-in duration-200">{item.label}</span>}
                   </button>
-                );
-              })}
-            </div>
-          </nav>
-        )}
 
-        {/* Footer Area with User Avatar & Logout */}
-        {sidebarOpen && activeSession?.user && (
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 shrink-0 space-y-3">
-            <div className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50">
-              <div 
-                onClick={() => {
-                  setActiveMenu("Profile");
-                  addAuditLog("SIDEBAR_CLICK", "คลิกโปรไฟล์จากแถบผู้ใช้");
-                }}
-                className="w-9 h-9 rounded-full border-2 border-primary/20 bg-primary/10 text-primary font-bold text-xs flex items-center justify-center cursor-pointer shadow-sm hover:scale-105 transition-all"
-              >
-                {activeSession.user.name ? activeSession.user.name.charAt(0).toUpperCase() : "U"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{activeSession.user.name}</p>
-                <p className="text-[10px] text-slate-400 font-semibold capitalize truncate">
-                  {role === "admin" ? (lang === "th" ? "แอดมิน" : "Admin") : role === "director" ? (lang === "th" ? "ผู้บริหาร" : "Executive") : (lang === "th" ? "อาจารย์" : "Teacher")}
-                </p>
-              </div>
-            </div>
-            
+                  {/* Collapsed Tooltip */}
+                  {!sidebarOpen && !isFloatingOpen && (
+                    <span className="absolute left-16 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-slate-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-md z-50">
+                      {item.label}
+                    </span>
+                  )}
+
+                  {/* Expanded Accordion List */}
+                  {sidebarOpen && isActive && hasSubtabs && (
+                    <div className="pl-9 pr-2 flex flex-col gap-1 mt-1.5 border-l border-white/10 ml-6 animate-in fade-in duration-200">
+                      {subtabs.map(sub => {
+                        const isSubActive = activeSubTab === sub.key || (item.name === "eleave" && eleaveSubTab === sub.key) || (item.name === "timetables" && timetableViewSubTab === sub.key);
+                        return (
+                          <button
+                            key={sub.key}
+                            onClick={() => {
+                              setActiveMenu(item.name);
+                              if (item.name === "eleave") {
+                                setEleaveSubTab(sub.key as any);
+                              } else if (item.name === "timetables") {
+                                setTimetableViewSubTab(sub.key);
+                              } else {
+                                setActiveSubTab(sub.key);
+                              }
+                            }}
+                            className={`text-left text-[11px] py-1 px-2 rounded-lg font-bold transition-all duration-200 ease-out cursor-pointer ${
+                              isSubActive 
+                                ? "text-indigo-300 bg-indigo-500/10" 
+                                : "text-white/35 hover:text-white/70"
+                            }`}
+                          >
+                            {sub.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Collapsed Floating Popover Submenu */}
+                  {!sidebarOpen && isFloatingOpen && hasSubtabs && (
+                    <div className="absolute left-14 top-0 ml-2 z-50 w-52 bg-[#1A2333] border border-white/10 rounded-2xl shadow-2xl p-2.5 flex flex-col gap-1.5 animate-in fade-in slide-in-from-left-2 duration-150">
+                      <div className="flex justify-between items-center pb-1 border-b border-white/10 px-1">
+                        <span className="text-[10px] text-white/40 font-extrabold uppercase">
+                          {item.label}
+                        </span>
+                        <X 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveFloatingMenu(null);
+                          }}
+                          className="w-3.5 h-3.5 text-white/40 hover:text-white cursor-pointer"
+                        />
+                      </div>
+                      {subtabs.map(sub => (
+                        <button
+                          key={sub.key}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenu(item.name);
+                            if (item.name === "eleave") {
+                              setEleaveSubTab(sub.key as any);
+                            } else if (item.name === "timetables") {
+                              setTimetableViewSubTab(sub.key);
+                            } else {
+                              setActiveSubTab(sub.key);
+                            }
+                            setActiveFloatingMenu(null);
+                          }}
+                          className="text-left text-xs py-1.5 px-2.5 rounded-lg font-bold text-white/60 hover:text-white hover:bg-white/[0.06] transition-all duration-200 ease-out cursor-pointer"
+                        >
+                          {sub.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            return (
+              <>
+                {sidebarMainItems.map(renderNavItem)}
+                <div className="w-8 h-px bg-white/10 my-2 shrink-0 mx-auto" />
+                {sidebarAdminItems.map(renderNavItem)}
+              </>
+            );
+          })()}
+        </nav>
+
+        {/* Footer Area with Logout */}
+        <div className="pt-4 border-t border-white/[0.06] shrink-0 w-full flex flex-col items-center gap-3">
+          <div className="relative group flex justify-center w-full">
             <button
               onClick={async () => {
                 await signOut();
                 router.push("/login");
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white dark:hover:bg-rose-500/20 text-xs font-bold transition-all cursor-pointer"
+              className={`rounded-2xl bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white flex items-center justify-center transition-all duration-200 ease-out cursor-pointer ${
+                sidebarOpen ? "w-[85%] py-2.5 gap-2 px-4" : "w-11 h-11"
+              }`}
             >
-              <LogOut className="w-4 h-4" />
-              <span>{lang === "th" ? "ออกจากระบบ" : "Sign Out"}</span>
+              <LogOut className="w-5 h-5 shrink-0" />
+              {sidebarOpen && <span className="text-xs font-bold">{lang === "th" ? "ออกจากระบบ" : "Sign Out"}</span>}
             </button>
+            {!sidebarOpen && (
+              <span className="absolute left-16 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-rose-600 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-md z-50">
+                {lang === "th" ? "ออกจากระบบ" : "Sign Out"}
+              </span>
+            )}
           </div>
-        )}
+        </div>
       </aside>
 
       {/* 🚀 MAIN CONTENT CONTAINER */}
       <div className="flex-1 flex flex-col overflow-hidden">
         
         {/* top header bar */}
-        <header className="h-18 glass-premium px-6 flex items-center justify-between z-10 shrink-0 relative" style={{ borderBottom: '1px solid rgba(255,255,255,0.4)' }}>
-          
-          {/* Greeting with username & Subtitle from Mockup */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== "undefined" && window.innerWidth < 768) {
-                  setMobileSidebarOpen(prev => !prev);
-                } else {
-                  setSidebarOpen(prev => !prev);
-                }
-              }}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-500 hover:text-foreground transition-all cursor-pointer flex items-center justify-center"
-              title="เปิด/ปิดเมนูด้านข้าง"
-            >
-              <Menu className="w-4 h-4" />
-            </button>
-            <div className="flex flex-col">
-              <h2 className="font-extrabold text-lg sm:text-xl text-slate-900 dark:text-white leading-tight tracking-tight">
-                {lang === "th" ? "แดชบอร์ด" : "Dashboard"}
-              </h2>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
-                {lang === "th" ? "ปีการศึกษา 2569 • ภาคเรียนที่ 1" : "Academic Year 2026 • Semester 1"}
-              </span>
-            </div>
-          </div>
-
-          {/* Right utility shortcuts */}
-          <div className="flex items-center gap-2.5">
+        <header className="z-10 shrink-0 mt-4 mx-6 relative">
+          <div className="rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.015)] border border-slate-200/40 dark:border-slate-800/40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-5 py-2.5 flex justify-between items-center transition-colors duration-300">
             
-            {/* Plus Shortcut Button from Mockup */}
-            <button
-              onClick={() => {
-                triggerToast(lang === "th" ? "➕ สร้างรายการใหม่" : "➕ Create New Item", lang === "th" ? "เปิดใช้งานคำสั่งสร้างด่วนสำเร็จ" : "Quick action created successfully.");
-              }}
-              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer"
-              title={lang === "th" ? "สร้างรายการใหม่" : "Create New"}
-            >
-              <Plus className="w-4.5 h-4.5" />
-            </button>
+            {/* Left Side: Sidebar Toggle + Greeting / Mockup Icons */}
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined" && window.innerWidth < 768) {
+                    setMobileSidebarOpen(prev => !prev);
+                  } else {
+                    setSidebarOpen(prev => !prev);
+                  }
+                }}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-500 hover:text-foreground transition-all cursor-pointer flex items-center justify-center"
+                title="เปิด/ปิดเมนูด้านข้าง"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
 
-            {/* Notification Bell */}
-            <div className="relative">
+              {/* Mockup Quick Icons on desktop */}
+              <div className="hidden md:flex items-center gap-3.5 text-slate-400 dark:text-slate-500 border-l border-slate-200 dark:border-slate-800 pl-4">
+                <Mail className="w-4.5 h-4.5 cursor-pointer hover:text-indigo-600 transition-colors" />
+                <MessageSquare className="w-4.5 h-4.5 cursor-pointer hover:text-indigo-600 transition-colors" />
+                <Calendar className="w-4.5 h-4.5 cursor-pointer hover:text-indigo-600 transition-colors" />
+                <CheckSquare className="w-4.5 h-4.5 cursor-pointer hover:text-indigo-600 transition-colors" />
+                <Star className="w-4.5 h-4.5 text-amber-400 fill-amber-400 cursor-pointer" />
+              </div>
+            </div>
+
+            {/* Right Side: Language Switcher, Search, Theme, Notifications & Profile */}
+            <div className="flex items-center gap-3">
+              
+              {/* Language Switcher Pill */}
               <button 
                 onClick={() => {
-                  setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                  triggerToast("🔔 เคลียร์แจ้งเตือน", "เปิดอ่านแจ้งเตือนทั้งหมดเรียบร้อยแล้ว");
+                  const newLang = lang === "th" ? "en" : "th";
+                  setLang(newLang);
+                  addAuditLog("SWITCH_LANGUAGE", `เปลี่ยนภาษาอินเตอร์เฟสเป็น: ${newLang === "th" ? "ภาษาไทย" : "English"}`);
+                  triggerToast(
+                    newLang === "th" ? "🇹🇭 เปลี่ยนเป็นภาษาไทย" : "🇬🇧 Switched to English",
+                    newLang === "th" ? "เปลี่ยนการแสดงผลเป็นภาษาไทยเรียบร้อยแล้ว" : "Application language is now English."
+                  );
                 }}
-                className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer relative"
+                className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-850 rounded-lg cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 text-[11px] font-bold text-slate-650 dark:text-slate-350 transition-all"
               >
-                <Bell className="w-4.5 h-4.5" />
-                {unreadNotifCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full" />
-                )}
+                <span>{lang === "th" ? "🇹🇭 TH" : "🇬🇧 EN"}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
-            </div>
 
-            {/* Language Switcher - pill style */}
-            <button 
-              onClick={() => {
-                const newLang = lang === "th" ? "en" : "th";
-                setLang(newLang);
-                addAuditLog("SWITCH_LANGUAGE", `เปลี่ยนภาษาอินเตอร์เฟสเป็น: ${newLang === "th" ? "ภาษาไทย" : "English"}`);
-                triggerToast(lang === "th" ? "🇺🇸 Switched to English" : "🇹🇭 เปลี่ยนเป็นภาษาไทย", lang === "th" ? "Application language is now English." : "เปลี่ยนการแสดงผลเป็นภาษาไทยเรียบร้อยแล้ว");
-              }}
-              className="h-8.5 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-650 dark:text-muted-foreground font-bold text-xs transition-all"
-            >
-              {lang === "th" ? "TH" : "EN"}
-            </button>
+              {/* Theme Toggle & Search Icons */}
+              <div className="flex items-center gap-1 text-slate-400">
+                <button 
+                  onClick={() => setDarkMode(prev => !prev)}
+                  className="p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all"
+                >
+                  {darkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4.5 h-4.5" />}
+                </button>
+                <button 
+                  onClick={() => setSearchOpen(true)}
+                  className="p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+                <div className="p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer relative">
+                  <Bell className="w-4.5 h-4.5" />
+                  {unreadNotifCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full border border-white dark:border-slate-900" />
+                  )}
+                </div>
+              </div>
 
-            {/* Dark Mode Toggle */}
-            <button 
-              onClick={() => setDarkMode(prev => !prev)}
-              className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer"
-            >
-              {darkMode ? <Sun className="w-4.5 h-4.5 text-amber-500" /> : <Moon className="w-4.5 h-4.5" />}
-            </button>
+              {/* Role swapper dropdown */}
+              <div className="hidden sm:flex items-center">
+                <select
+                  className="h-8 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 outline-none text-[10px] font-bold text-slate-650 dark:text-muted-foreground px-2 py-1 rounded-lg cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50"
+                  value={role}
+                  onChange={(e) => {
+                    const newRole = e.target.value as UserRole;
+                    setRole(newRole);
+                    addAuditLog("SWITCH_ROLE", `สลับบทบาทการใช้งานของท่านไปเป็น: ${newRole}`);
+                    triggerToast("🔄 สลับบทบาทเรียบร้อย", `ขณะนี้คุณกำลังใช้งานระบบในบทบาท: ${newRole === "teacher" ? "ครูผู้สอน" : newRole === "director" ? "ผู้อำนวยการ" : newRole === "admin" ? "ผู้ดูแลระบบ" : "นักเรียน"}`);
+                  }}
+                >
+                  <option value="teacher">{lang === "th" ? "ครูผู้สอน" : "Teacher"}</option>
+                  <option value="director">{lang === "th" ? "ผอ. โรงเรียน" : "Director"}</option>
+                  <option value="student">{lang === "th" ? "นักเรียน / ผู้ปกครอง" : "Student"}</option>
+                  <option value="admin">{lang === "th" ? "ผู้ดูแลระบบ (Admin)" : "System Admin"}</option>
+                </select>
+              </div>
 
-            {/* Role Swapper - compact */}
-            <div className="hidden lg:flex items-center">
-              <select
-                className="h-8.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 outline-none text-xs font-bold text-slate-600 dark:text-muted-foreground px-3 py-1 rounded-lg cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
-                value={role}
-                onChange={(e) => {
-                  const newRole = e.target.value as UserRole;
-                  setRole(newRole);
-                  addAuditLog("SWITCH_ROLE", `สลับบทบาทการใช้งานของท่านไปเป็น: ${newRole}`);
-                  triggerToast("🔄 สลับบทบาทเรียบร้อย", `ขณะนี้คุณกำลังใช้งานระบบในบทบาท: ${newRole === "teacher" ? "ครูผู้สอน" : newRole === "director" ? "ผู้อำนวยการ" : newRole === "admin" ? "ผู้ดูแลระบบ" : "นักเรียน"}`);
-                }}
-              >
-                <option value="teacher">ครูผู้สอน</option>
-                <option value="director">ผอ. โรงเรียน</option>
-                <option value="student">นักเรียน / ผู้ปกครอง</option>
-                <option value="admin">ผู้ดูแลระบบ (Admin)</option>
-              </select>
+              {/* User Profile dropdown */}
+              {activeSession?.user && (
+                <div className="flex items-center gap-2.5 border-l border-slate-200 dark:border-slate-800 pl-3">
+                  <div className="text-right hidden md:block">
+                    <p className="text-[11px] font-extrabold text-slate-800 dark:text-white leading-tight">
+                      {activeSession.user.name}
+                    </p>
+                    <p className="text-[9px] text-slate-400 font-bold tracking-wider leading-tight mt-0.5 uppercase">
+                      {role === "admin" ? (lang === "th" ? "แอดมิน" : "Admin") : role === "director" ? (lang === "th" ? "ผู้บริหาร" : "Director") : (lang === "th" ? "อาจารย์" : "Teacher")}
+                    </p>
+                  </div>
+                  <div 
+                    onClick={() => {
+                      setActiveMenu("Profile");
+                      addAuditLog("HEADER_CLICK", "คลิกโปรไฟล์จากปุ่มรูปภาพ");
+                    }}
+                    className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-extrabold text-[10px] cursor-pointer shadow-sm hover:scale-105 transition-all overflow-hidden"
+                  >
+                    {activeSession.user.image ? (
+                      <img src={activeSession.user.image} alt={activeSession.user.name || "User"} className="w-full h-full object-cover" />
+                    ) : (
+                      activeSession.user.name ? activeSession.user.name.charAt(0).toUpperCase() : "U"
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
 
           </div>
         </header>
 
+        
         {/* 💻 SECONDARY SUB-MENU TABS & VIEWS */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 space-y-6">
           
           {/* ==================== 1. HOME VIEW ==================== */}
           {activeMenu === "Home" && (
             <div className="space-y-4">
-              <div className="glass-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="relative z-10">
-                  <h2 className="text-base font-bold text-foreground flex items-center gap-1.5">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    สวัสดีครับ, ยินดีต้อนรับกลับสู่ระบบ School OS
-                  </h2>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ระบบวิเคราะห์อัจฉริยะประมวลผลข้อมูลล่าสุดเมื่อ: <span className="font-semibold" suppressHydrationWarning>{new Date().toLocaleTimeString()}</span> ของวันนี้
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 relative z-10">
-                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20 capitalize">
-                    Role: {role}
-                  </span>
+              {/* Compact Welcome Hero with gradient mesh */}
+              <div className="glass-card p-4 relative overflow-hidden">
+                {/* Subtle gradient mesh background */}
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{background: 'radial-gradient(ellipse at 20% 50%, #6366F1 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, #38BDF8 0%, transparent 50%)'}} />
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+                      <Sparkles className="w-4.5 h-4.5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-foreground leading-tight">
+                        {lang === "th" ? "สวัสดีครับ, ยินดีต้อนรับกลับ" : "Welcome back"}
+                      </h2>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {lang === "th" ? "ข้อมูลล่าสุด" : "Last updated"}: <span className="font-semibold" suppressHydrationWarning>{new Date().toLocaleTimeString()}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 relative z-10">
+                    {/* Live status badge */}
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/15">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-status-pulse" />
+                      {lang === "th" ? "ระบบทำงานปกติ" : "All systems operational"}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold border border-primary/15 capitalize">
+                      {role}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -878,6 +1368,7 @@ export default function Workspace() {
                 }}
                 onApproveRequest={handleWorkflowApprove}
                 notificationsCount={unreadNotifCount}
+                userName={activeSession?.user?.name}
               />
             </div>
           )}
@@ -921,57 +1412,116 @@ export default function Workspace() {
                     <span className="text-xs text-muted-foreground">คลิกรายชื่อเพื่อเปิดใช้งาน <b>Timeline Engine</b> ดึงประวัตินักเรียนย้อนหลัง</span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {students.map((student) => (
-                      <div 
-                        key={student.id}
-                        onClick={() => {
-                          setSelectedStudent(student);
-                          setTimelineOpen(true);
-                          addAuditLog("VIEW_STUDENT_TIMELINE", `เรียกดูข้อมูล Timeline Engine ของ ${student.fullName}`);
-                        }}
-                        className="p-4 rounded-2xl glass glass-card hover:bg-card hover:border-primary/40 cursor-pointer shadow-sm transition-all group flex flex-col justify-between h-40"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shadow-sm select-none">
-                              {student.nickname || student.fullName.trim().charAt(0)}
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-sm group-hover:text-primary transition-colors text-foreground">{student.fullName}</h4>
-                              <p className="text-[10px] text-muted-foreground">เลขประจำตัว {student.studentCode} • ชั้น {student.classroom}</p>
-                            </div>
-                          </div>
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
-                            student.status === "ปกติ" 
-                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
-                              : student.status === "เสี่ยง" 
-                              ? "bg-amber-500/10 text-amber-500 border-amber-500/20" 
-                              : "bg-rose-500/10 text-rose-500 border-rose-500/20"
-                          }`}>
-                            {student.status}
-                          </span>
-                        </div>
-
-                        {/* Student quick metrics */}
-                        <div className="grid grid-cols-3 gap-1 pt-3 border-t border-border/60 text-center">
-                          <div>
-                            <span className="text-[8px] text-muted-foreground uppercase font-bold">ความประพฤติ</span>
-                            <p className="text-xs font-bold text-primary dark:text-indigo-400">{student.behaviorPoints} คะแนน</p>
-                          </div>
-                          <div>
-                            <span className="text-[8px] text-muted-foreground uppercase font-bold">เช็คชื่อวันนี้</span>
-                            <p className={`text-xs font-bold uppercase ${
-                              student.attendanceToday === "present" ? "text-emerald-500" : "text-rose-500"
-                            }`}>{student.attendanceToday || "ยังไม่ระบุ"}</p>
-                          </div>
-                          <div>
-                            <span className="text-[8px] text-muted-foreground uppercase font-bold">เยี่ยมบ้าน</span>
-                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{student.homeVisited ? "สำเร็จ" : "ยัง"}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="p-6 rounded-2xl glass glass-card overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-border/80 text-muted-foreground uppercase font-bold">
+                            <th className="py-3 px-4 text-center">{lang === "th" ? "เลขที่" : "No."}</th>
+                            <th className="py-3 px-4">{lang === "th" ? "รูปถ่าย" : "Photo"}</th>
+                            <th className="py-3 px-4">{lang === "th" ? "ชื่อ-นามสกุล" : "Student Name"}</th>
+                            <th className="py-3 px-4">{lang === "th" ? "เลขประจำตัว" : "Student ID"}</th>
+                            <th className="py-3 px-4 text-center">{lang === "th" ? "คะแนนพฤติกรรม" : "Conduct Points"}</th>
+                            <th className="py-3 px-4 text-center">{lang === "th" ? "คัดกรอง SDQ" : "SDQ Screening"}</th>
+                            <th className="py-3 px-4 text-center">{lang === "th" ? "เยี่ยมบ้าน" : "Home Visit"}</th>
+                            <th className="py-3 px-4 text-right">{lang === "th" ? "การจัดการ" : "Action"}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40 font-semibold text-foreground">
+                          {students.map((student) => {
+                            const isVisited = student.homeVisited;
+                            return (
+                              <tr 
+                                key={student.id} 
+                                className="hover:bg-muted/30 transition-all cursor-pointer"
+                                onClick={() => {
+                                  setSelectedStudent(student);
+                                  setIsDetailModalOpen(true);
+                                  addAuditLog("VIEW_STUDENT_DETAILS", `เปิดดูข้อมูลเชิงลึกของ ${student.fullName}`);
+                                }}
+                              >
+                                <td className="py-3 px-4 text-center text-muted-foreground font-mono">{student.seatNumber || "-"}</td>
+                                <td className="py-3 px-4">
+                                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-center shrink-0">
+                                    {student.profileImage || student.profile?.profileImage ? (
+                                      <img 
+                                        src={student.profileImage || student.profile?.profileImage} 
+                                        alt={student.fullName} 
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full bg-gradient-to-tr from-indigo-500 to-purple-650 flex items-center justify-center text-white font-extrabold text-[9px] select-none">
+                                        {student.nickname || student.fullName.slice(3, 5)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-extrabold text-slate-850 dark:text-white">{student.fullName}</span>
+                                    {student.nickname && (
+                                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                                        {student.nickname}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 font-mono text-slate-500 dark:text-slate-400">{student.studentCode}</td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    student.behaviorPoints >= 80 ? "text-emerald-500 bg-emerald-500/10" : "text-rose-500 bg-rose-500/10"
+                                  }`}>
+                                    {student.behaviorPoints} / 100
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                                    student.sdqRisk === "ปกติ" 
+                                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                                      : student.sdqRisk === "เสี่ยง" 
+                                      ? "bg-amber-500/10 text-amber-600 border-amber-500/20" 
+                                      : "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                                  }`}>
+                                    {student.sdqRisk || "ยังไม่ประเมิน"}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                                    isVisited 
+                                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                                      : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                  }`}>
+                                    {isVisited ? (lang === "th" ? "เยี่ยมแล้ว" : "Visited") : (lang === "th" ? "ยังไม่ได้เยี่ยม" : "Pending")}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-right flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedStudent(student);
+                                      setTimelineOpen(true);
+                                      addAuditLog("VIEW_STUDENT_TIMELINE", `เปิดดูพฤติกรรม Timeline ของ ${student.fullName}`);
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-550 dark:text-slate-350 text-[10px] font-bold transition-all cursor-pointer"
+                                  >
+                                    {lang === "th" ? "พฤติกรรม" : "Timeline"}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedStudent(student);
+                                      setIsDetailModalOpen(true);
+                                      addAuditLog("VIEW_STUDENT_DETAILS", `เปิดดูข้อมูลเชิงลึกของ ${student.fullName}`);
+                                    }}
+                                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold shadow-sm transition-all cursor-pointer"
+                                  >
+                                    {lang === "th" ? "ดูข้อมูลเชิงลึก" : "Profile"}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1131,123 +1681,435 @@ export default function Workspace() {
                 >
                   ลงคะแนน ปพ.5 & ซิงค์ SGS (Assessment)
                 </button>
+                <button 
+                  onClick={() => setActiveSubTab("calendar")}
+                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
+                    activeSubTab === "calendar" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
+                  }`}
+                >
+                  ปฏิทินวิชาการ (Academic Calendar)
+                </button>
               </div>
 
               {/* SubTab 1: Interactive Attendance check in */}
               {activeSubTab === "attendance" && (
-                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                <div className="p-6 rounded-2xl glass glass-card space-y-6 animate-in fade-in duration-200">
+                  {/* Mode Selector Toggle */}
+                  <div className="flex justify-between items-center border-b border-border/80 pb-4">
                     <div>
-                      <h3 className="text-sm font-bold text-foreground">เช็คชื่อนักเรียนเข้าร่วมแถวและคาบเรียนโฮมรูม ม.6/1</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">การปรับสถานะเช็คชื่อตรงนี้จะส่งผลต่อ Dashboard ของผู้อำนวยการโรงเรียนและสถิติภาพรวม</p>
+                      <h3 className="text-sm font-bold text-foreground">
+                        {attendanceMode === "homeroom" 
+                          ? "เช็คชื่อโฮมรูมประจำวัน (Advisory Homeroom Daily Roll Call)" 
+                          : "บันทึกเวลาเรียนรายวิชา (Subject Attendance Tracker)"}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {attendanceMode === "homeroom" 
+                          ? "ลงบันทึกเวลาเช็คชื่อเข้าแถวตอนเช้าของห้องเรียนที่ปรึกษา" 
+                          : "เลือกห้องเรียน วันที่ และคาบวิชาเพื่อลงบันทึกเวลาเข้าเรียนตามตารางสอนจริง"}
+                      </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button 
+                    <div className="flex bg-muted/65 p-1 rounded-xl border border-border/80">
+                      <button
+                        type="button"
                         onClick={() => {
-                          students.forEach(s => handleAttendanceChange(s.id, "present"));
-                          triggerToast("👍 เช็คชื่อมาเรียนทั้งหมด", "บันทึกข้อมูลนักเรียน ม.6/1 ว่ามาเรียนครบทุกคนแล้ว");
+                          setAttendanceMode("homeroom");
+                          addAuditLog("SWITCH_ATTENDANCE_MODE", "สลับเป็นโหมดเช็คชื่อโฮมรูม");
                         }}
-                        className="px-3 py-1.5 bg-primary/10 hover:bg-indigo-500/20 text-primary dark:text-indigo-400 font-bold text-xs rounded-lg transition-all"
-                      >
-                        เช็คมาเรียนทั้งหมด
-                      </button>
-                      <button 
-                        onClick={syncBulkAttendance}
-                        disabled={isSyncingAttendance}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm flex items-center gap-1.5 transition-all ${
-                          isSyncingAttendance 
-                            ? "bg-primary/70 cursor-not-allowed" 
-                            : "bg-primary hover:bg-indigo-700"
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                          attendanceMode === "homeroom"
+                            ? "bg-primary text-white shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {isSyncingAttendance ? (
-                          <>
-                            <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                            กำลังซิงค์...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-                            </svg>
-                            ซิงค์ API คลาวด์ & พุช LINE
-                          </>
-                        )}
+                        โฮมรูม (Homeroom)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttendanceMode("subject");
+                          addAuditLog("SWITCH_ATTENDANCE_MODE", "สลับเป็นโหมดเช็คชื่อรายวิชา");
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                          attendanceMode === "subject"
+                            ? "bg-primary text-white shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        รายคาบวิชา (Subject)
                       </button>
                     </div>
                   </div>
 
-                  {/* Attendance table Grid */}
-                  <div className="space-y-2">
-                    {students.map((student) => {
-                      const safeAvatar = student.nickname || student.fullName.trim().charAt(0);
-                      const isOther = ["leave", "sick"].includes(student.attendanceToday || "");
-                      const otherVal = isOther ? student.attendanceToday : "";
-                      return (
-                        <div key={student.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card hover:border-indigo-200 dark:hover:border-indigo-950 transition-all gap-3">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-mono font-bold text-slate-400 dark:text-muted-foreground w-6 text-center">{student.seatNumber}</span>
-                            <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-semibold flex items-center justify-center text-xs shrink-0 select-none">
-                              {safeAvatar}
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-xs text-slate-850 dark:text-white leading-tight">{student.fullName}</h4>
-                              <p className="text-[10px] text-slate-400 dark:text-muted-foreground mt-0.5">เลขประจำตัว {student.studentCode}</p>
-                            </div>
-                          </div>
-
-                          {/* Compact Status Selector Buttons */}
-                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                            <div className="inline-flex rounded-lg p-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80">
-                              {[
-                                { code: "present", name: "มา", activeClass: "bg-emerald-500 text-white shadow-sm dark:bg-emerald-600", inactiveClass: "text-emerald-600 hover:bg-emerald-50/50 dark:text-emerald-500 dark:hover:bg-emerald-950/20" },
-                                { code: "late", name: "สาย", activeClass: "bg-amber-500 text-white shadow-sm dark:bg-amber-600", inactiveClass: "text-amber-600 hover:bg-amber-50/50 dark:text-amber-500 dark:hover:bg-amber-950/20" },
-                                { code: "absent", name: "ขาด", activeClass: "bg-rose-500 text-white shadow-sm dark:bg-rose-600", inactiveClass: "text-rose-600 hover:bg-rose-50/50 dark:text-rose-500 dark:hover:bg-rose-950/20" }
-                              ].map((btn) => {
-                                const isSelected = student.attendanceToday === btn.code;
-                                return (
-                                  <button
-                                    key={btn.code}
-                                    type="button"
-                                    onClick={() => handleAttendanceChange(student.id, btn.code as Student["attendanceToday"])}
-                                    className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                                      isSelected ? btn.activeClass : `${btn.inactiveClass} bg-transparent`
-                                    }`}
-                                  >
-                                    {btn.name}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {/* Clean dropdown selector for others like leave or sick */}
-                            <div className="relative">
-                              <select
-                                value={otherVal}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (val) {
-                                    handleAttendanceChange(student.id, val as Student["attendanceToday"]);
-                                  } else {
-                                    handleAttendanceChange(student.id, "present");
-                                  }
-                                }}
-                                className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border bg-slate-50 dark:bg-slate-900 cursor-pointer outline-none transition-all ${
-                                  isOther 
-                                    ? "border-sky-300 bg-sky-50 dark:border-sky-900/50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400" 
-                                    : "border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400"
-                                }`}
-                              >
-                                <option value="" className="text-slate-500">อื่น ๆ...</option>
-                                <option value="leave" className="text-sky-600 dark:text-sky-400">ลา</option>
-                                <option value="sick" className="text-teal-600 dark:text-teal-400">ป่วย</option>
-                              </select>
-                            </div>
+                  {attendanceMode === "homeroom" ? (
+                    /* HOMEROOM ROLL CALL MODE */
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50">
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground block">เลือกวันที่บันทึก</label>
+                          <input 
+                            type="date"
+                            value={attDate}
+                            onChange={(e) => setAttDate(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl text-xs font-semibold border border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 transition-all text-slate-800 dark:text-slate-100"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground block">ห้องที่ปรึกษา (Advisory Class)</label>
+                          <div className="w-full px-3 py-2 rounded-xl text-xs font-bold border border-slate-250 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900 text-indigo-600 dark:text-indigo-400">
+                            {activeSession.user.advisoryClass || activeSession.user.classroom || "ม.6/1"}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+
+                      {/* Warnings & Feedback */}
+                      {(() => {
+                        const jsDay = new Date(attDate).getDay();
+                        if (jsDay === 0 || jsDay === 6) {
+                          return (
+                            <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-2">
+                              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              ไม่สามารถลงเวลาเรียนในวันเสาร์-อาทิตย์ได้
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      {/* Homeroom Roll Call List */}
+                      {(() => {
+                        const advClass = activeSession.user.advisoryClass || activeSession.user.classroom || "ม.6/1";
+                        const classStudents = students.filter(s => s.classroom === advClass);
+                        
+                        return (
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[11px] font-extrabold text-slate-400 dark:text-muted-foreground uppercase tracking-wider">
+                                รายชื่อนักเรียนห้อง {advClass} ({classStudents.length} คน)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated: Record<string, string> = {};
+                                  classStudents.forEach(s => {
+                                    updated[s.id] = "present";
+                                  });
+                                  setAttRecords(updated);
+                                  triggerToast("👍 เช็คชื่อโฮมรูมมาเรียนทั้งหมด", "ตั้งค่าให้นักเรียนทั้งหมดมีสถานะ มาเรียน");
+                                }}
+                                className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold text-xs rounded-lg hover:bg-indigo-100 transition-all cursor-pointer"
+                              >
+                                โฮมรูมครบทุกคน
+                              </button>
+                            </div>
+
+                            <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+                              {classStudents.length === 0 ? (
+                                <div className="text-center py-8 text-xs text-muted-foreground font-semibold">
+                                  ไม่พบข้อมูลนักเรียนในห้องเรียนที่ปรึกษานี้
+                                </div>
+                              ) : (
+                                classStudents.map((student) => {
+                                  const currentStatus = attRecords[student.id] || "present";
+                                  const safeAvatar = student.nickname || student.fullName.trim().charAt(0);
+                                  return (
+                                    <div 
+                                      key={student.id} 
+                                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card hover:border-indigo-200 dark:hover:border-indigo-950 transition-all gap-3"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-xs font-mono font-bold text-slate-450 dark:text-muted-foreground w-6 text-center">{student.seatNumber || "-"}</span>
+                                        <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-semibold flex items-center justify-center text-xs shrink-0 select-none">
+                                          {safeAvatar}
+                                        </div>
+                                        <div>
+                                          <h4 className="font-bold text-xs text-slate-850 dark:text-white leading-tight">{student.fullName}</h4>
+                                          <p className="text-[10px] text-slate-450 dark:text-muted-foreground mt-0.5">เลขประจำตัว {student.studentCode}</p>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                        {[
+                                          { code: "present", label: "มา", activeClass: "bg-emerald-500 text-white shadow-sm dark:bg-emerald-600", inactiveClass: "text-emerald-500 hover:bg-emerald-50/40 dark:text-emerald-400 dark:hover:bg-emerald-950/10" },
+                                          { code: "late", label: "สาย", activeClass: "bg-amber-500 text-white shadow-sm dark:bg-amber-600", inactiveClass: "text-amber-500 hover:bg-amber-50/40 dark:text-amber-400 dark:hover:bg-amber-950/10" },
+                                          { code: "absent", label: "ขาด", activeClass: "bg-rose-500 text-white shadow-sm dark:bg-rose-600", inactiveClass: "text-rose-500 hover:bg-rose-50/40 dark:text-rose-400 dark:hover:bg-rose-950/10" },
+                                          { code: "sick", label: "ป่วย", activeClass: "bg-teal-500 text-white shadow-sm dark:bg-teal-600", inactiveClass: "text-teal-500 hover:bg-teal-50/40 dark:text-teal-400 dark:hover:bg-teal-950/10" },
+                                          { code: "leave", label: "ลา", activeClass: "bg-sky-500 text-white shadow-sm dark:bg-sky-600", inactiveClass: "text-sky-500 hover:bg-sky-50/40 dark:text-sky-400 dark:hover:bg-sky-950/10" }
+                                        ].map((opt) => {
+                                          const isActive = currentStatus === opt.code;
+                                          return (
+                                            <button
+                                              key={opt.code}
+                                              type="button"
+                                              onClick={() => {
+                                                setAttRecords(prev => ({
+                                                  ...prev,
+                                                  [student.id]: opt.code
+                                                }));
+                                              }}
+                                              className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                                isActive ? opt.activeClass : `${opt.inactiveClass} bg-slate-50 dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800/40`
+                                              }`}
+                                            >
+                                              {opt.label}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+
+                            {/* Homeroom Save controls */}
+                            <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setAttSaving(true);
+                                  // Simulated bulk Homeroom API call
+                                  setTimeout(() => {
+                                    setAttSaving(false);
+                                    triggerToast("💾 บันทึกโฮมรูมสำเร็จ", `บันทึกข้อมูลโฮมรูมเรียบร้อยแล้วและส่ง LINE ถึงผู้ปกครองนักเรียนที่ขาดเรียน`);
+                                    addAuditLog("SAVE_HOMEROOM_ATTENDANCE", `บันทึกรายชื่อเข้าแถวโฮมรูม ห้อง ${advClass}`);
+                                    
+                                    // Trigger LINE notifications for absent students
+                                    classStudents.forEach(s => {
+                                      const status = attRecords[s.id] || "present";
+                                      if (status === "absent") {
+                                        triggerLineNotification(
+                                          s.parentName || `ผู้ปกครองของ ${s.fullName}`,
+                                          `เรียนผู้ปกครอง วันนี้นักเรียน ${s.fullName} ขาดการเช็คชื่อเข้าแถว/โฮมรูมตอนเช้า กรุณาติดต่อครูประจำชั้นหากต้องการแจ้งสาเหตุครับ`,
+                                          s.fullName
+                                        );
+                                      }
+                                    });
+                                  }, 1000);
+                                }}
+                                disabled={attSaving}
+                                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {attSaving ? (
+                                  <>
+                                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                    กำลังบันทึก...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    บันทึกและแจ้งเตือนผู้ปกครอง (Bulk Sync)
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    /* SUBJECT ATTENDANCE TRACKER MODE (PRE-EXISTING) */
+                    <div className="space-y-6">
+                      {/* Form Selection Row */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50">
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground block">เลือกวันที่</label>
+                          <input 
+                            type="date"
+                            value={attDate}
+                            onChange={(e) => setAttDate(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl text-xs font-semibold border border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 transition-all text-slate-800 dark:text-slate-100"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground block">เลือกห้องเรียน</label>
+                          <select 
+                            value={attClassroom}
+                            onChange={(e) => setAttClassroom(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl text-xs font-semibold border border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 transition-all text-slate-800 dark:text-slate-100"
+                          >
+                            <option value="">เลือกห้องเรียน...</option>
+                            {classroomsList.map((cls) => (
+                              <option key={cls.id} value={cls.name}>{cls.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-400 dark:text-muted-foreground block">เลือกคาบเรียน / วิชา</label>
+                          <select 
+                            value={attSelectedScheduleId}
+                            onChange={(e) => setAttSelectedScheduleId(e.target.value)}
+                            disabled={!attClassroom || attLoadingSchedules || attSchedules.length === 0}
+                            className="w-full px-3 py-2 rounded-xl text-xs font-semibold border border-slate-250 dark:border-slate-800 bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 transition-all text-slate-800 dark:text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {attLoadingSchedules ? (
+                              <option>กำลังโหลดตารางเรียน...</option>
+                            ) : !attClassroom ? (
+                              <option>กรุณาเลือกห้องเรียนก่อน...</option>
+                            ) : attSchedules.length === 0 ? (
+                              <option>ไม่มีคาบสอนในวันนี้</option>
+                            ) : (
+                              <>
+                                <option value="">เลือกคาบเรียน...</option>
+                                {attSchedules.map((sch) => (
+                                  <option key={sch.id} value={sch.id}>
+                                    คาบ {sch.period.name} ({sch.period.startTime} - {sch.period.endTime}): {sch.subject.code} {sch.subject.name} (ครู{sch.user.name})
+                                  </option>
+                                ))}
+                              </>
+                            )}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Warnings & Feedback */}
+                      {(() => {
+                        const jsDay = new Date(attDate).getDay();
+                        if (jsDay === 0 || jsDay === 6) {
+                          return (
+                            <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-2">
+                              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              ไม่สามารถลงเวลาเรียนในวันเสาร์-อาทิตย์ได้
+                            </div>
+                          );
+                        }
+                        if (attClassroom && !attLoadingSchedules && attSchedules.length === 0) {
+                          return (
+                            <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2">
+                              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              ไม่พบตารางสอนในวันนี้สำหรับห้องเรียน {attClassroom}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      {/* Student Attendance List */}
+                      {attSelectedScheduleId && (
+                        <div className="space-y-4 animate-in fade-in duration-200">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[11px] font-extrabold text-slate-400 dark:text-muted-foreground uppercase tracking-wider">
+                              รายชื่อนักเรียน ({students.filter(s => s.classroom === attClassroom).length} คน)
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const classroomStudents = students.filter(s => s.classroom === attClassroom);
+                                const updated: Record<string, string> = {};
+                                classroomStudents.forEach(s => {
+                                  updated[s.id] = "present";
+                                });
+                                setAttRecords(updated);
+                                triggerToast("👍 เช็คชื่อมาเรียนทั้งหมด", "ตั้งค่าให้นักเรียนทั้งหมดมีสถานะ มาเรียน");
+                              }}
+                              className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold text-xs rounded-lg hover:bg-indigo-100 transition-all cursor-pointer"
+                            >
+                              เช็คมาเรียนทั้งหมด
+                            </button>
+                          </div>
+
+                          <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+                            {(() => {
+                              const classroomStudents = students.filter(s => s.classroom === attClassroom);
+                              if (classroomStudents.length === 0) {
+                                return (
+                                  <div className="text-center py-8 text-xs text-muted-foreground font-semibold">
+                                    ไม่พบข้อมูลนักเรียนในห้องเรียนนี้
+                                  </div>
+                                );
+                              }
+
+                              return classroomStudents.map((student) => {
+                                const currentStatus = attRecords[student.id] || "present";
+                                const safeAvatar = student.nickname || student.fullName.trim().charAt(0);
+
+                                return (
+                                  <div 
+                                    key={student.id} 
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-card hover:border-indigo-200 dark:hover:border-indigo-950 transition-all gap-3"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-mono font-bold text-slate-450 dark:text-muted-foreground w-6 text-center">{student.seatNumber || "-"}</span>
+                                      <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-semibold flex items-center justify-center text-xs shrink-0 select-none">
+                                        {safeAvatar}
+                                      </div>
+                                      <div>
+                                        <h4 className="font-bold text-xs text-slate-850 dark:text-white leading-tight">{student.fullName}</h4>
+                                        <p className="text-[10px] text-slate-450 dark:text-muted-foreground mt-0.5">เลขประจำตัว {student.studentCode}</p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                      {[
+                                        { code: "present", label: "มา", activeClass: "bg-emerald-500 text-white shadow-sm dark:bg-emerald-600", inactiveClass: "text-emerald-500 hover:bg-emerald-50/40 dark:text-emerald-400 dark:hover:bg-emerald-950/10" },
+                                        { code: "late", label: "สาย", activeClass: "bg-amber-500 text-white shadow-sm dark:bg-amber-600", inactiveClass: "text-amber-500 hover:bg-amber-50/40 dark:text-amber-400 dark:hover:bg-amber-950/10" },
+                                        { code: "absent", label: "ขาด", activeClass: "bg-rose-500 text-white shadow-sm dark:bg-rose-600", inactiveClass: "text-rose-500 hover:bg-rose-50/40 dark:text-rose-400 dark:hover:bg-rose-950/10" },
+                                        { code: "sick", label: "ป่วย", activeClass: "bg-teal-500 text-white shadow-sm dark:bg-teal-600", inactiveClass: "text-teal-500 hover:bg-teal-50/40 dark:text-teal-400 dark:hover:bg-teal-950/10" },
+                                        { code: "leave", label: "ลา", activeClass: "bg-sky-500 text-white shadow-sm dark:bg-sky-600", inactiveClass: "text-sky-500 hover:bg-sky-50/40 dark:text-sky-400 dark:hover:bg-sky-950/10" }
+                                      ].map((opt) => {
+                                        const isActive = currentStatus === opt.code;
+                                        return (
+                                          <button
+                                            key={opt.code}
+                                            type="button"
+                                            onClick={() => {
+                                              setAttRecords(prev => ({
+                                                ...prev,
+                                                [student.id]: opt.code
+                                              }));
+                                            }}
+                                            className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                              isActive ? opt.activeClass : `${opt.inactiveClass} bg-slate-50 dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800/40`
+                                            }`}
+                                          >
+                                            {opt.label}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              });
+                            })()}
+                          </div>
+
+                          {/* Save Controls */}
+                          <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <button
+                              type="button"
+                              onClick={handleSaveSubjectAttendance}
+                              disabled={attSaving}
+                              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {attSaving ? (
+                                <>
+                                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                  กำลังบันทึก...
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                  </svg>
+                                  บันทึกรายวิชา
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1319,15 +2181,100 @@ export default function Workspace() {
                       <div className="lg:col-span-1 space-y-6">
                         <div className="p-6 rounded-2xl glass glass-card space-y-4">
                           <h3 className="text-sm font-bold text-foreground">
-                            {lang === "th" ? "เลือกครูผู้สอน" : "Select Instructor"}
+                            {lang === "th" ? "โหมดแสดงผลตารางสอน" : "Timetable View Mode"}
                           </h3>
-                          <select className="w-full bg-background border border-border rounded-xl p-2.5 text-xs font-semibold text-foreground">
-                            <option>นายสมชาย ใจดี (วิทยฐานะ ชำนาญการ)</option>
-                            <option>ครูอัญชลี รัตนฯ (คณิตศาสตร์)</option>
-                            <option>น.ส.วิภาวรรณ แก้วดี (ภาษาอังกฤษ)</option>
-                          </select>
-                          <div className="text-[11px] p-3 bg-primary/10 text-primary dark:text-indigo-400 rounded-xl font-bold border border-primary/20">
-                            คาบสอนทั้งหมด: 18 คาบ/สัปดาห์
+                          <div className="flex bg-muted/65 p-1 rounded-xl border border-border/80">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setViewMode("classroom");
+                                addAuditLog("SWITCH_SCHEDULER_MODE", "สลับมุมมองตารางสอนเป็นชั้นเรียน");
+                              }}
+                              className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                                viewMode === "classroom"
+                                  ? "bg-primary text-white shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              ชั้นเรียน
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setViewMode("teacher");
+                                addAuditLog("SWITCH_SCHEDULER_MODE", "สลับมุมมองตารางสอนเป็นคุณครู");
+                              }}
+                              className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                                viewMode === "teacher"
+                                  ? "bg-primary text-white shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              ครูผู้สอน
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setViewMode("room");
+                                addAuditLog("SWITCH_SCHEDULER_MODE", "สลับมุมมองตารางสอนเป็นห้องเรียน");
+                              }}
+                              className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                                viewMode === "room"
+                                  ? "bg-primary text-white shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              ห้องปฏิบัติการ
+                            </button>
+                          </div>
+
+                          {/* Dynamic Dropdown Select */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-muted-foreground uppercase font-bold">
+                              {viewMode === "classroom" ? "เลือกชั้นเรียน" : viewMode === "teacher" ? "เลือกครูผู้สอน" : "เลือกห้องเรียน"}
+                            </label>
+                            {viewMode === "classroom" && (
+                              <select 
+                                className="w-full bg-background border border-border rounded-xl p-2.5 text-xs font-semibold text-foreground outline-none cursor-pointer"
+                                value={selectedClassroomId}
+                                onChange={(e) => {
+                                  setSelectedClassroomId(e.target.value);
+                                  setViewId(e.target.value);
+                                }}
+                              >
+                                {classroomsList.map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            )}
+                            {viewMode === "teacher" && (
+                              <select 
+                                className="w-full bg-background border border-border rounded-xl p-2.5 text-xs font-semibold text-foreground outline-none cursor-pointer"
+                                value={selectedTeacherId}
+                                onChange={(e) => {
+                                  setSelectedTeacherId(e.target.value);
+                                  setViewId(e.target.value);
+                                }}
+                              >
+                                {teachers.map(t => (
+                                  <option key={t.id} value={t.id}>{t.fullName}</option>
+                                ))}
+                              </select>
+                            )}
+                            {viewMode === "room" && (
+                              <select 
+                                className="w-full bg-background border border-border rounded-xl p-2.5 text-xs font-semibold text-foreground outline-none cursor-pointer"
+                                value={selectedRoomId}
+                                onChange={(e) => {
+                                  setSelectedRoomId(e.target.value);
+                                  setViewId(e.target.value);
+                                }}
+                              >
+                                {rooms.map(r => (
+                                  <option key={r.id} value={r.id}>{r.name}</option>
+                                ))}
+                              </select>
+                            )}
                           </div>
                         </div>
 
@@ -1343,6 +2290,8 @@ export default function Workspace() {
                               <div
                                 key={sub.id}
                                 className="p-3 bg-indigo-500/5 hover:bg-primary/10 border border-primary/10 rounded-xl cursor-grab hover:scale-102 hover:shadow-sm transition-all flex items-center justify-between font-bold text-xs"
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, sub)}
                               >
                                 <div className="flex items-center gap-2">
                                   <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: sub.color }}></div>
@@ -1377,7 +2326,16 @@ export default function Workspace() {
                         </div>
 
                         <div className="overflow-x-auto pb-4">
-                          <ScheduleGrid />
+                          <ScheduleGrid 
+                            viewMode={viewMode}
+                            viewId={viewId}
+                            selectedTeacherId={selectedTeacherId}
+                            selectedClassroomId={selectedClassroomId}
+                            selectedRoomId={selectedRoomId}
+                            dbPeriods={periods}
+                            isAdmin={role === "admin" || activeSession?.user?.email === "admin@school.os"}
+                            onScheduleUpdated={refreshDbData}
+                          />
                         </div>
                       </div>
                     </div>
@@ -1678,6 +2636,13 @@ export default function Workspace() {
                   </div>
                 </div>
               )}
+
+              {/* SubTab 4: Academic Calendar */}
+              {activeSubTab === "calendar" && (
+                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
+                  <AcademicCalendar />
+                </div>
+              )}
             </div>
           )}
 
@@ -1832,232 +2797,40 @@ export default function Workspace() {
 
           {/* ==================== 5. ENGAGEMENT VIEW ==================== */}
           {activeMenu === "Engagement" && (
-            <div className="space-y-4">
-              <div className="flex border-b border-border/80">
-                <button 
-                  onClick={() => setActiveSubTab("line")}
-                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "line" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
-                  }`}
-                >
-                  แจ้งเตือนผู้ปกครอง (LINE Messaging API)
-                </button>
-                <button 
-                  onClick={() => setActiveSubTab("surveys")}
-                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "surveys" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
-                  }`}
-                >
-                  แบบสำรวจความพึงพอใจและอบรม (Surveys)
-                </button>
-              </div>
-
-              {/* SubTab 1: LINE Integration Messaging API */}
-              {activeSubTab === "line" && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
-                  {/* Message Creator */}
-                  <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4 h-fit">
-                    <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                      <Send className="w-4 h-4 text-emerald-500" />
-                      ระบบส่งข้อความแจ้งเตือนหาผู้ปกครอง (LINE official)
-                    </h3>
-                    <form onSubmit={handleSendCustomLine} className="space-y-4 text-xs text-muted-foreground font-semibold">
-                      <div className="space-y-1">
-                        <label className="text-[9px] uppercase font-bold text-muted-foreground">เลือกนักเรียนที่ต้องการติดต่อ</label>
-                        <select 
-                          className="w-full bg-background border border-border rounded-xl p-2.5 text-xs text-foreground font-semibold outline-none"
-                          value={selectedLineStudentId}
-                          onChange={(e) => setSelectedLineStudentId(e.target.value)}
-                        >
-                          {students.map(s => (
-                            <option key={s.id} value={s.id}>{s.fullName} ({s.classroom}) — ผู้ปกครอง: {s.parentName}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] uppercase font-bold text-muted-foreground">เนื้อหาการส่งข้อความ</label>
-                        <textarea 
-                          rows={4} 
-                          className="w-full bg-background border border-border rounded-xl p-3 text-xs text-foreground font-semibold outline-none resize-none focus:border-primary"
-                          value={lineMsgContent}
-                          onChange={(e) => setLineMsgContent(e.target.value)}
-                          required
-                        />
-                      </div>
-
-                      <button 
-                        type="submit"
-                        className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
-                      >
-                        <Send className="w-4 h-4" />
-                        ส่ง API Message แจ้ง LINE ผู้ปกครองทันที
-                      </button>
-                    </form>
-                  </div>
-
-                  {/* LINE API Node details status */}
-                  <div className="p-6 rounded-2xl glass glass-card space-y-4">
-                    <h3 className="text-sm font-bold text-foreground">สถานะระบบส่งข้อความ (LINE Node)</h3>
-                    <div className="p-4 rounded-xl border border-border bg-card space-y-3 text-xs">
-                      <div className="flex justify-between items-center">
-                        <span>สถานะการเชื่อมต่อ:</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-bold">ONLINE</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>LINE Channel Token:</span>
-                        <span className="font-mono text-[9px] text-muted-foreground truncate w-24">eyJhIjoibGluZSIsImMiOiIz...</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>เป้าหมายผู้ปกครองลิงก์แล้ว:</span>
-                        <span className="font-bold text-foreground">845 คน</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* SubTab 2: Surveys */}
-              {activeSubTab === "surveys" && (
-                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
-                  <h3 className="text-sm font-bold text-foreground">สร้างและออกแบบประเมินกิจกรรมภายในสถานศึกษา (Surveys)</h3>
-                  <div className="p-4 rounded-xl border border-border bg-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      <h4 className="font-bold text-xs text-primary dark:text-indigo-400">แบบประเมินความพึงพอใจการพัฒนาครู ยุคดิจิทัล</h4>
-                      <p className="text-xs text-muted-foreground mt-1">สแกน QR-Code เพื่อทำการร่วมแสดงความคิดเห็นประเมินการฝึกอบรมสัมมนา</p>
-                    </div>
-                    {/* Simulated live QR image representation */}
-                    <div className="p-2 bg-white rounded-lg border border-border flex items-center justify-center w-24 h-24 shadow">
-                      <div className="w-20 h-20 bg-slate-900 flex flex-wrap gap-0.5 p-1 rounded">
-                        {Array.from({ length: 16 }).map((_, i) => (
-                          <div key={i} className={`w-4 h-4 rounded-xs ${i % 3 === 0 ? "bg-white" : "bg-slate-950"}`} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <EngagementView
+              activeSubTab={activeSubTab}
+              setActiveSubTab={setActiveSubTab}
+              students={students}
+              triggerLineNotification={triggerLineNotification}
+              addAuditLog={addAuditLog}
+              triggerToast={triggerToast}
+              currentUser={activeSession?.user?.name || undefined}
+            />
           )}
 
           {/* ==================== 6. ANALYTICS VIEW ==================== */}
           {activeMenu === "Analytics" && (
-            <div className="space-y-6">
-              
-              {/* Secondary Navigation SubTabs */}
-              <div className="flex border-b border-border/80">
-                <button 
-                  onClick={() => setActiveSubTab("risk")}
-                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "risk" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
-                  }`}
-                >
-                  วิเคราะห์ความเสี่ยงเด็กค้างเรียน (AI Student Risk Detector)
-                </button>
-                <button 
-                  onClick={() => setActiveSubTab("kpi")}
-                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-                    activeSubTab === "kpi" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
-                  }`}
-                >
-                  ผลคะแนนเฉลี่ยภาพรวม (KPI & GPA Charts)
-                </button>
-              </div>
-
-              {/* SubTab 1: AI Student Risk Detector */}
-              {activeSubTab === "risk" && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
-                  
-                  {/* Risk list */}
-                  <div className="lg:col-span-2 p-6 rounded-2xl glass glass-card space-y-4">
-                    <h3 className="text-sm font-bold text-foreground">นักเรียนที่ประเมินพฤติกรรมมีความเสี่ยง (AI Insights Flagged)</h3>
-                    <div className="space-y-3">
-                      {students.filter(s => s.status !== "ปกติ").map((student) => (
-                        <div key={student.id} className="p-4 rounded-xl border border-border bg-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                          <div>
-                            <span className={`text-[8px] px-2 py-0.5 rounded font-bold ${
-                              student.status === "เสี่ยง" ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"
-                            }`}>{student.status}</span>
-                            <h4 className="font-bold text-sm text-foreground mt-1.5">{student.fullName}</h4>
-                            <p className="text-xs text-muted-foreground"><b>สาเหตุวิเคราะห์:</b> พฤติกรรมสะสมเหลือเพียง {student.behaviorPoints} คะแนน, ประเมินสุขภาพจิต SDQ ผิดปกติ</p>
-                          </div>
-                          
-                          <button 
-                            onClick={() => {
-                              setSelectedStudent(student);
-                              setTimelineOpen(true);
-                            }}
-                            className="text-xs font-bold bg-primary hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition-all"
-                          >
-                            แผนช่วยเหลือระบบ
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* AI insights analysis card */}
-                  <div className="p-6 rounded-2xl glass glass-card space-y-4">
-                    <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-primary" />
-                      AI Insight Assistant
-                    </h3>
-                    <div className="p-4 rounded-xl border border-border bg-indigo-500/5 space-y-3 text-xs leading-normal">
-                      <p className="font-semibold text-primary dark:text-indigo-400">บทวิเคราะห์ระบบโรงเรียนประจำสัปดาห์:</p>
-                      <p className="text-muted-foreground">
-                        พบเด็กในกลุ่มเป้าหมาย ม.6/1 มีแนวโน้มการขาดเรียนสัมพันธ์กับการลดลงของคะแนนพฤติกรรมอย่างมีนัยสำคัญ. แนะแนวโรงเรียนควรเร่งรัดทำ Home Visit ร่วมกับฝ่ายพยาบาล
-                      </p>
-                      <button 
-                        onClick={() => {
-                          triggerToast("📝 ร่างจดหมายแนะแนวแสนสุข", "AI ช่วยร่างเนื้อหาจดหมายเชิญผู้ปกครองเพื่อร่วมปรึกษาหาทางออกร่วมกันเรียบร้อยแล้ว");
-                          addAuditLog("GENERATE_AI_REPORT", "AI บรรยายร่างใบส่งตัวปรึกษานักเรียนกลุ่มเสี่ยงวิกฤต");
-                        }}
-                        className="w-full py-2 bg-primary hover:bg-indigo-700 text-white font-bold text-[10px] rounded-lg transition-all"
-                      >
-                        ให้ AI ร่างหนังสือเชิญประชุมผู้ปกครอง
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-              )}
-
-              {/* SubTab 2: GPA Recharts placeholder */}
-              {activeSubTab === "kpi" && (
-                <div className="p-6 rounded-2xl glass glass-card space-y-4 animate-in fade-in duration-200">
-                  <h3 className="text-sm font-bold text-foreground">สถิติอัตราการมาเรียนในรอบสัปดาห์ (Attendance Rate Visual)</h3>
-                  {/* Stunning animated SVG chart representing academic days */}
-                  <div className="h-64 rounded-xl border border-border bg-card flex flex-col justify-end p-4 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 to-purple-500/5 pointer-events-none" />
-                    
-                    {/* SVG Line representation for gorgeous visuals */}
-                    <div className="flex-1 w-full flex items-end justify-between px-6 pb-6 relative z-1">
-                      {[
-                        { day: "จันทร์", rate: 98, h: "h-[98%]" },
-                        { day: "อังคาร", rate: 94, h: "h-[94%]" },
-                        { day: "พุธ", rate: 96, h: "h-[96%]" },
-                        { day: "พฤหัสฯ", rate: 92, h: "h-[92%]" },
-                        { day: "ศุกร์", rate: 97, h: "h-[97%]" },
-                      ].map((item, i) => (
-                        <div key={i} className="flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
-                          <span className="text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity">{item.rate}%</span>
-                          <div className={`w-12 bg-gradient-to-t from-indigo-500 to-purple-600 rounded-lg group-hover:scale-x-105 transition-all shadow ${item.h}`} />
-                          <span className="text-[10px] text-muted-foreground font-semibold">{item.day}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
+            <ReportsView
+              activeSubTab={activeSubTab}
+              setActiveSubTab={setActiveSubTab}
+              role={role}
+              students={students}
+              teachers={teachers}
+              classroomsList={classroomsList}
+              subjectsList={subjectsList}
+              leaveRequests={leaveRequests}
+              setSelectedStudent={setSelectedStudent}
+              setTimelineOpen={setTimelineOpen}
+              triggerToast={triggerToast}
+              addAuditLog={addAuditLog}
+            />
           )}
 
           {/* ==================== 7. ADMIN VIEW ==================== */}
           {activeMenu === "Admin" && (
             <div className="space-y-6">
               
-              <div className="flex border-b border-border/80">
+              <div className="flex border-b border-border/80 flex-wrap">
                 <button 
                   onClick={() => setActiveSubTab("rules")}
                   className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
@@ -2073,6 +2846,14 @@ export default function Workspace() {
                   }`}
                 >
                   ประวัติระบบและ Audit Log
+                </button>
+                <button 
+                  onClick={() => setActiveSubTab("system")}
+                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
+                    activeSubTab === "system" ? "border-indigo-600 text-primary" : "border-transparent text-muted-foreground"
+                  }`}
+                >
+                  ตั้งค่าระบบใหญ่ (Global Settings)
                 </button>
               </div>
 
@@ -2147,62 +2928,209 @@ export default function Workspace() {
                 </div>
               )}
 
+              {/* SubTab 3: Global System Settings */}
+              {activeSubTab === "system" && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
+                  {/* Left Column: Branding Settings */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="p-6 rounded-2xl glass glass-card space-y-5">
+                      <div>
+                        <h3 className="text-sm font-bold text-foreground">ข้อมูลระบุเอกลักษณ์โรงเรียนและระบบ (School & System Branding)</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">จัดการโลโก้ ชื่อโรงเรียน และชื่อระบบแสดงผลบนหน้าต่าง ๆ ของแอปพลิเคชัน</p>
+                      </div>
+
+                      <form onSubmit={handleGeneralSubmit} className="space-y-4">
+                        {/* Logo Upload */}
+                        <div>
+                          <label className="block text-xs font-bold text-foreground/80 mb-2">โลโก้โรงเรียน (School Logo)</label>
+                          <div className="flex items-center gap-6">
+                            <div className="w-20 h-20 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
+                              {logoUrl ? (
+                                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
+                              ) : (
+                                <ImageIcon className="w-8 h-8 text-slate-400" />
+                              )}
+                            </div>
+                            <div>
+                              <input type="file" id="logo-upload" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
+                              <label 
+                                htmlFor="logo-upload" 
+                                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                              >
+                                <UploadCloud className="w-4 h-4 text-indigo-500" />
+                                {isUploading ? "กำลังอัปโหลด..." : "อัปโหลดรูปภาพใหม่"}
+                              </label>
+                              <p className="text-[10px] text-slate-400 mt-2">รองรับไฟล์ PNG, JPG ขนาดไม่เกิน 2MB (ไฟล์จะถูกแปลงเป็น Base64 และบันทึกตรงในเซิร์ฟเวอร์)</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-foreground/80 mb-1">ชื่อโรงเรียน (School Name)</label>
+                            <input
+                              type="text"
+                              required
+                              value={schoolName}
+                              onChange={(e) => setSchoolName(e.target.value)}
+                              className="w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-850 bg-background/50 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-foreground"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-foreground/80 mb-1">ชื่อโปรแกรม / หัวเรื่องย่อย (System Subheader)</label>
+                            <input
+                              type="text"
+                              required
+                              value={subheader}
+                              onChange={(e) => setSubheader(e.target.value)}
+                              className="w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-850 bg-background/50 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-foreground"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="border-t border-border/80 pt-4 space-y-4">
+                          <div>
+                            <h4 className="text-xs font-bold text-foreground">การแจ้งเตือนทาง LINE (LINE Notifications)</h4>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">กำหนดค่าสำหรับส่งข้อความแจ้งเตือนความปลอดภัยหาผู้ปกครอง</p>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-355 mb-1">Channel Access Token</label>
+                              <input
+                                type="text"
+                                value={lineChannelAccessToken}
+                                onChange={(e) => setLineChannelAccessToken(e.target.value)}
+                                placeholder="ใส่ Channel Access Token จาก LINE Developers"
+                                className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-background/50 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono text-foreground"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-355 mb-1">Target Group ID / User ID</label>
+                              <input
+                                type="text"
+                                value={lineTargetGroupId}
+                                onChange={(e) => setLineTargetGroupId(e.target.value)}
+                                placeholder="ใส่ Group ID หรือ User ID ปลายทาง"
+                                className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-background/50 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono text-foreground"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="submit"
+                            disabled={isSavingGeneral}
+                            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs focus:ring-4 focus:ring-indigo-500/20 transition-all disabled:opacity-50"
+                          >
+                            <span>{isSavingGeneral ? "กำลังบันทึก..." : "บันทึกการตั้งค่าเอกลักษณ์"}</span>
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Footer Settings & Backup */}
+                  <div className="space-y-6">
+                    {/* Footer Settings */}
+                    <div className="p-6 rounded-2xl glass glass-card space-y-4 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-bl-[100px] -z-10" />
+                      <div>
+                        <h3 className="text-sm font-bold text-rose-650 dark:text-rose-400 flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-500" />
+                          ตั้งค่าส่วนท้ายโปรแกรม (Footer Settings)
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          แก้ไขลิขสิทธิ์และข้อความด้านล่างของหน้าล็อกอิน (ต้องการรหัสลับนักพัฒนา)
+                        </p>
+                      </div>
+
+                      <form onSubmit={handleFooterSubmit} className="space-y-3.5">
+                        <div>
+                          <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-355 mb-1">ข้อความแสดงผล (Footer Text)</label>
+                          <input
+                            type="text"
+                            required
+                            value={footerText}
+                            onChange={(e) => setFooterText(e.target.value)}
+                            className="w-full h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-background/50 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-bold text-foreground"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-355 mb-1 flex items-center gap-1">
+                            Developer Secret Key
+                          </label>
+                          <input
+                            type="password"
+                            required
+                            value={developerSecret}
+                            onChange={(e) => setDeveloperSecret(e.target.value)}
+                            placeholder="รหัสผ่านนักพัฒนา"
+                            className="w-full h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-background/50 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-mono text-foreground"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isSavingFooter}
+                          className="w-full flex items-center justify-center h-9 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 focus:ring-4 focus:ring-rose-500/20 transition-all text-xs disabled:opacity-50"
+                        >
+                          {isSavingFooter ? "กำลังบันทึก..." : "ยืนยันการเปลี่ยนข้อความ"}
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* System Backup & Restore */}
+                    <div className="p-6 rounded-2xl glass glass-card space-y-4 relative overflow-hidden">
+                      <div>
+                        <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                          <DownloadCloud className="w-4 h-4 text-emerald-500" />
+                          การสำรองและกู้คืนระบบ (System Backup)
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          ดาวน์โหลดไฟล์สำรองข้อมูลหรือนำเข้าไฟล์สำรองเพื่อกู้คืนฐานข้อมูลการตั้งค่าทั้งหมด
+                        </p>
+                      </div>
+
+                      <div className="space-y-3 pt-1">
+                        <button
+                          onClick={handleBackup}
+                          disabled={isBackingUp}
+                          className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40 font-bold text-xs transition-all disabled:opacity-50"
+                        >
+                          <DownloadCloud className="w-4 h-4" />
+                          {isBackingUp ? "กำลังสำรองข้อมูล..." : "ดาวน์โหลดข้อมูลสำรอง (JSON)"}
+                        </button>
+
+                        <label className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 text-slate-650 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-all disabled:opacity-50 text-xs">
+                          <UploadCloud className="w-4 h-4 text-indigo-500" />
+                          {isImporting ? "กำลังนำเข้าข้อมูล..." : "กู้คืนระบบจากไฟล์ JSON"}
+                          <input type="file" accept=".json" className="hidden" onChange={handleImportBackup} disabled={isImporting} />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
 
           {/* ==================== 9. E-LEAVE PORTAL ==================== */}
           {activeMenu === "eleave" && (
-            <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between border-b border-border/80 pb-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
-                  <h3 className="font-bold text-sm md:text-base text-foreground">
-                    {lang === "th" ? "ระบบการลาออนไลน์ (e-Leave Portal)" : "e-Leave Online Portal"}
-                  </h3>
-                </div>
-                {/* Switcher Navigation */}
-                <div className="flex flex-wrap gap-1 bg-muted/60 p-1 rounded-xl border border-border/80">
-                  {[
-                    { key: "dashboard", label: lang === "th" ? "ภาพรวม" : "Dashboard" },
-                    { key: "form", label: lang === "th" ? "เขียนใบลา" : "Request" },
-                    { key: "history", label: lang === "th" ? "ประวัติ" : "History" },
-                    ...(isApprover ? [{ key: "approvals", label: lang === "th" ? "รออนุมัติ" : "Approvals" }] : []),
-                    ...(role === "admin" ? [
-                      { key: "users", label: lang === "th" ? "ผู้ใช้" : "Users" },
-                      { key: "logs", label: lang === "th" ? "ประวัติระบบ" : "Logs" },
-                      { key: "reports", label: lang === "th" ? "รายงาน" : "Reports" },
-                      { key: "settings", label: lang === "th" ? "ตั้งค่า" : "Settings" }
-                    ] : [])
-                  ].map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => {
-                        setEleaveSubTab(tab.key as any);
-                        addAuditLog("ELEAVE_TAB_CLICK", `สลับแท็บยื่นลาเป็น: ${tab.key}`);
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
-                        eleaveSubTab === tab.key 
-                          ? "bg-primary text-white shadow-sm" 
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <LeaveView role={role} lang={lang} subTab={eleaveSubTab} setSubTab={setEleaveSubTab} />
+          )}
 
-              <div className="p-1 rounded-2xl border border-border/60 bg-card overflow-hidden">
-                {eleaveSubTab === "dashboard" && <DashboardPage />}
-                {eleaveSubTab === "form" && <RequestLeavePage />}
-                {eleaveSubTab === "history" && <HistoryPage />}
-                {eleaveSubTab === "approvals" && <ApprovalsPage />}
-                {eleaveSubTab === "users" && <UsersLeavePage />}
-                {eleaveSubTab === "logs" && <LogsLeavePage />}
-                {eleaveSubTab === "reports" && <ReportsPage />}
-                {eleaveSubTab === "settings" && <SettingsPage />}
-              </div>
-            </div>
+          {/* ==================== TIMETABLE PORTAL ==================== */}
+          {activeMenu === "timetables" && (
+            <TimetableView role={role} lang={lang} subTab={timetableViewSubTab} setSubTab={setTimetableViewSubTab} />
+          )}
+
+          {/* ==================== STUDENT CARE / HOME VISIT ==================== */}
+          {activeMenu === "StudentCare" && (
+            <StudentCareView role={role} lang={lang} />
           )}
 
           {/* ==================== 10. MY PROFILE ==================== */}
@@ -2231,10 +3159,21 @@ export default function Workspace() {
               <button
                 key={item.name}
                 onClick={() => {
+                  if (item.name === "eleave") {
+                    setActiveMenu(item.name);
+                    setEleaveSubTab("dashboard");
+                    return;
+                  }
+                  if (item.name === "timetables") {
+                    setActiveMenu(item.name);
+                    setTimetableViewSubTab("dashboard");
+                    return;
+                  }
                   setActiveMenu(item.name);
                   if (item.name === "Home") setActiveSubTab("dashboard");
                   else if (item.name === "People") setActiveSubTab("students");
                   else if (item.name === "Academic") setActiveSubTab("attendance");
+                  else if (item.name === "StudentCare") setActiveSubTab("dashboard");
                   else if (item.name === "Operations") setActiveSubTab("requests");
                   else if (item.name === "Engagement") setActiveSubTab("line");
                 }}
@@ -2275,31 +3214,31 @@ export default function Workspace() {
         <div className="fixed inset-0 z-50 flex md:hidden animate-in fade-in duration-200">
           {/* Background backdrop */}
           <div 
-            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm" 
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" 
             onClick={() => setMobileSidebarOpen(false)}
           />
-          {/* Drawer menu panel */}
-          <div className="relative flex flex-col w-64 max-w-xs bg-white dark:bg-slate-950 h-full border-r border-slate-100 dark:border-slate-800 shadow-2xl p-5 space-y-6 animate-in slide-in-from-left duration-250 z-10">
+          {/* Drawer menu panel — Dark Gradient */}
+          <div className="relative flex flex-col w-64 max-w-xs sidebar-dark h-full border-r border-white/[0.06] shadow-2xl p-5 space-y-6 animate-in slide-in-from-left duration-250 z-10">
             {/* Close button & Brand */}
-            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex justify-between items-center pb-4 border-b border-white/[0.06]">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
                   <GraduationCap className="w-4.5 h-4.5 text-white" />
                 </div>
-                <span className="font-bold text-xs text-foreground leading-none">โรงเรียนคุชปะชาสรรค์</span>
+                <span className="font-bold text-xs text-white/90 leading-none">School OS</span>
               </div>
               <button 
                 type="button"
                 onClick={() => setMobileSidebarOpen(false)}
-                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer"
+                className="p-1 rounded-full hover:bg-white/10 text-white/40 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Navigation items */}
-            <nav className="flex-1 space-y-1.5 overflow-y-auto">
-              <p className="text-[10px] text-slate-400 dark:text-muted-foreground font-semibold uppercase tracking-wider mb-2.5">{lang === "th" ? "เมนูหลัก" : "Main Menu"}</p>
+            <nav className="flex-1 space-y-1 overflow-y-auto">
+              <p className="text-[10px] text-white/30 font-semibold uppercase tracking-wider mb-2.5">{lang === "th" ? "เมนูหลัก" : "Main Menu"}</p>
               {sidebarMainItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeMenu === item.name;
@@ -2308,30 +3247,43 @@ export default function Workspace() {
                     key={item.name}
                     type="button"
                     onClick={() => {
+                      if (item.name === "eleave") {
+                        setActiveMenu(item.name);
+                        setEleaveSubTab("dashboard");
+                        setMobileSidebarOpen(false);
+                        return;
+                      }
+                      if (item.name === "timetables") {
+                        setActiveMenu(item.name);
+                        setTimetableViewSubTab("dashboard");
+                        setMobileSidebarOpen(false);
+                        return;
+                      }
                       setActiveMenu(item.name);
                       if (item.name === "Home") setActiveSubTab("dashboard");
                       else if (item.name === "People") setActiveSubTab("students");
                       else if (item.name === "Academic") setActiveSubTab("attendance");
+                      else if (item.name === "StudentCare") setActiveSubTab("dashboard");
                       else if (item.name === "Operations") setActiveSubTab("requests");
                       else if (item.name === "Engagement") setActiveSubTab("line");
                       setMobileSidebarOpen(false);
                       addAuditLog("MOBILE_SIDEBAR_CLICK", `คลิกเมนูหลัก: ${item.name}`);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 ease-out cursor-pointer ${
                       isActive 
-                        ? "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-semibold border-l-4 border-indigo-600 pl-[8px]" 
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/10"
+                        ? "glow-active text-white font-semibold" 
+                        : "text-white/50 hover:text-white/80 hover:bg-white/[0.05]"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-muted-foreground"}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? "text-indigo-300" : "text-white/40"}`} />
                     <span>{item.label}</span>
                   </button>
                 );
               })}
 
               {/* Admin modules block */}
-              <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-                <p className="text-[10px] text-slate-400 dark:text-muted-foreground font-semibold uppercase tracking-wider mb-2.5">{lang === "th" ? "โมดูลผู้ดูแลระบบ" : "Admin Modules"}</p>
+              <div className="pt-4 mt-4 border-t border-white/[0.06]">
+                <p className="text-[10px] text-white/30 font-semibold uppercase tracking-wider mb-2.5">{lang === "th" ? "โมดูลผู้ดูแลระบบ" : "Admin Modules"}</p>
                 {sidebarAdminItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeMenu === item.name;
@@ -2346,13 +3298,13 @@ export default function Workspace() {
                         setMobileSidebarOpen(false);
                         addAuditLog("MOBILE_SIDEBAR_CLICK", `คลิกโมดูลแอดมิน: ${item.name}`);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 ease-out cursor-pointer ${
                         isActive 
-                          ? "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-semibold border-l-4 border-indigo-600 pl-[8px]" 
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/10"
+                          ? "glow-active text-white font-semibold" 
+                          : "text-white/50 hover:text-white/80 hover:bg-white/[0.05]"
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-muted-foreground"}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? "text-indigo-300" : "text-white/40"}`} />
                       <span>{item.label}</span>
                     </button>
                   );
@@ -2362,6 +3314,14 @@ export default function Workspace() {
           </div>
         </div>
       )}
+
+      {/* Student Detail Modal */}
+      <StudentDetailModal
+        student={selectedStudent}
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        lang={lang}
+      />
 
       {/* Timeline Drawer overlay */}
       <TimelineEngine 
@@ -2400,10 +3360,21 @@ export default function Workspace() {
               key={item.name}
               type="button"
               onClick={() => {
+                if (item.name === "eleave") {
+                  setActiveMenu(item.name);
+                  setEleaveSubTab("dashboard");
+                  return;
+                }
+                if (item.name === "timetables") {
+                  setActiveMenu(item.name);
+                  setTimetableViewSubTab("dashboard");
+                  return;
+                }
                 setActiveMenu(item.name);
                 if (item.name === "Home") setActiveSubTab("dashboard");
                 else if (item.name === "People") setActiveSubTab("students");
                 else if (item.name === "Academic") setActiveSubTab("attendance");
+                else if (item.name === "StudentCare") setActiveSubTab("dashboard");
                 else if (item.name === "Operations") setActiveSubTab("requests");
                 else if (item.name === "Engagement") setActiveSubTab("line");
                 addAuditLog("MOBILE_NAVBAR_CLICK", `คลิกเมนูด้านล่าง: ${item.name}`);

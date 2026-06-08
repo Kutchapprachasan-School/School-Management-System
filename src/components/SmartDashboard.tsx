@@ -17,6 +17,7 @@ interface SmartDashboardProps {
   onSelectStudent: (student: Student) => void;
   onApproveRequest: (id: string, decision: "APPROVED" | "REJECTED") => void;
   notificationsCount: number;
+  userName?: string | null;
 }
 
 export default function SmartDashboard({
@@ -28,6 +29,7 @@ export default function SmartDashboard({
   onSelectStudent,
   onApproveRequest,
   notificationsCount,
+  userName,
 }: SmartDashboardProps) {
   
   // Calculate general stats

@@ -296,111 +296,19 @@ export default function SettingsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{t("settingsTitle")}</h1>
-        <p className="text-muted-foreground text-gray-500">{t("settingsSubtitle")}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+          {lang === "th" ? "ตั้งค่าระบบการลาออนไลน์" : "e-Leave Settings"}
+        </h1>
+        <p className="text-muted-foreground text-gray-500">
+          {lang === "th" ? "ปรับแต่งโควตาวันลา และข้อกำหนดสิทธิ์การลาเฉพาะของระบบการลา" : "Configure leave quotas, warning thresholds, and rules specific to e-Leave."}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left Column (General Settings & Leave Config) */}
+        {/* Left Column (Leave Quota Config & Rules Editor) */}
         <div className="lg:col-span-2 space-y-6">
           
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-gray-800">
-            <h3 className="text-lg font-semibold mb-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-4">
-              {t("generalSettings")}
-            </h3>
-            
-            <form onSubmit={handleGeneralSubmit} className="space-y-5">
-              {/* Logo Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("schoolLogo")}</label>
-                <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 rounded-xl bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center overflow-hidden">
-                    {logoUrl ? (
-                      <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
-                    ) : (
-                      <ImageIcon className="w-8 h-8 text-gray-400" />
-                    )}
-                  </div>
-                  <div>
-                    <input type="file" id="logo-upload" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
-                    <label 
-                      htmlFor="logo-upload" 
-                      className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      {isUploading ? t("uploading") : t("uploadNewImage")}
-                    </label>
-                    <p className="text-xs text-gray-500 mt-2">รองรับไฟล์ PNG, JPG ขนาดไม่เกิน 2MB (ไฟล์จะบันทึกในเซิร์ฟเวอร์)</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("schoolName")}</label>
-                <input
-                  type="text"
-                  required
-                  value={schoolName}
-                  onChange={(e) => setSchoolName(e.target.value)}
-                  className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("subheaderLabel")}</label>
-                <input
-                  type="text"
-                  required
-                  value={subheader}
-                  onChange={(e) => setSubheader(e.target.value)}
-                  className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                />
-              </div>
-
-              <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
-                <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-4">{t("lineSettings")}</h4>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Channel Access Token</label>
-                    <input
-                      type="text"
-                      value={lineChannelAccessToken}
-                      onChange={(e) => setLineChannelAccessToken(e.target.value)}
-                      placeholder="ใส่ Channel Access Token (Long-lived) จาก LINE Developers"
-                      className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Group ID (หรือ User ID)</label>
-                    <input
-                      type="text"
-                      value={lineTargetGroupId}
-                      onChange={(e) => setLineTargetGroupId(e.target.value)}
-                      placeholder="ใส่ Group ID หรือ User ID ที่ต้องการให้บอทส่งข้อความไป"
-                      className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono text-sm"
-                    />
-                    <p className="text-xs text-gray-500 mt-2">
-                      ใช้สำหรับการส่งแจ้งเตือนแบบ Push Message ผ่าน LINE Messaging API บอทต้องอยู่ในกลุ่มนั้นแล้ว หรือส่งเข้าหาผู้ใช้โดยตรงด้วย User ID
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={isSavingGeneral}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-500/20 transition-all disabled:opacity-50"
-                >
-                  <Save className="w-4 h-4" />
-                  {isSavingGeneral ? t("saving") : t("saveSettings")}
-                </button>
-              </div>
-            </form>
-          </div>
-
           {/* Leave Configuration */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 dark:border-gray-800">
             <h3 className="text-lg font-semibold mb-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-4 flex items-center gap-2">
@@ -486,58 +394,11 @@ export default function SettingsPage() {
               </button>
             </div>
           </form>
-
-
         </div>
 
-        {/* Right Column (Advanced Settings) */}
+        {/* Right Column (Leave Specific Advanced Actions) */}
         <div className="space-y-6">
           
-          {/* Footer Settings */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-rose-100 dark:border-rose-900/30 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-bl-[100px] -z-10" />
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-rose-500" />
-              {t("footerSettings")}
-            </h3>
-            <p className="text-xs text-gray-500 mb-4">
-              ส่วนนี้ต้องการ <span className="font-semibold text-rose-600">รหัสลับนักพัฒนา</span> ในการแก้ไข
-            </p>
-
-            <form onSubmit={handleFooterSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("footerText")}</label>
-                <input
-                  type="text"
-                  required
-                  value={footerText}
-                  onChange={(e) => setFooterText(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
-                  <Code className="w-3.5 h-3.5" /> Developer Secret
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={developerSecret}
-                  onChange={(e) => setDeveloperSecret(e.target.value)}
-                  placeholder="ใส่รหัสลับที่นี่"
-                  className="w-full h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-mono"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={isSavingFooter}
-                className="w-full flex items-center justify-center gap-2 h-10 rounded-lg bg-rose-600 text-white font-medium hover:bg-rose-700 focus:ring-4 focus:ring-rose-500/20 transition-all text-sm disabled:opacity-50"
-              >
-                {isSavingFooter ? t("checking") : t("confirmFooter")}
-              </button>
-            </form>
-          </div>
-
           {/* Leave Data Backup */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100 dark:border-gray-800 relative overflow-hidden">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-start gap-2 mb-2">

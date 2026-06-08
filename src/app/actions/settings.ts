@@ -52,7 +52,7 @@ export async function getSystemSettings() {
   return safeSettings;
 }
 
-export async function updateSystemSettings(data: { schoolName: string; subheader: string; logoUrl?: string; lineChannelAccessToken?: string; lineTargetGroupId?: string; leaveRules?: string }) {
+export async function updateSystemSettings(data: { schoolName: string; subheader: string; logoUrl?: string; lineChannelAccessToken?: string; lineTargetGroupId?: string; leaveRules?: string; lineGroupCode?: string; lineGroupInviteUrl?: string }) {
   await requireAdmin();
 
   await prisma.systemSettings.upsert({

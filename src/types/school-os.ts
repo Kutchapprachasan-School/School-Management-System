@@ -41,6 +41,8 @@ export interface Student {
   parentName: string;
   parentPhone: string;
   homeVisited: boolean;
+  profileImage?: string;
+  profile?: any;
 }
 
 export interface Teacher {
@@ -81,6 +83,7 @@ export interface HealthVisit {
   medicineUsed: string;
   actionTaken: string;
   visitTime: string;
+  temperature?: number;
 }
 
 export interface TimelineEvent {

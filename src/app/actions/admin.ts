@@ -113,7 +113,7 @@ export async function getAllUsers() {
 }
 
 // ========= Update User Profile =========
-export async function updateUserProfile(userId: string, data: { name?: string; email?: string; role?: string; position?: string; subjectGroup?: string }) {
+export async function updateUserProfile(userId: string, data: { name?: string; email?: string; role?: string; position?: string; subjectGroup?: string; employeeCode?: string; phone?: string; dutyDay?: string; advisoryClass?: string; }) {
   await requireAdmin();
 
   await prisma.user.update({
@@ -273,7 +273,7 @@ export async function resetUserPasswordByAdmin(userId: string, newPassword: stri
 }
 
 // ========= Create User by Admin =========
-export async function createUserByAdmin(data: { name: string; email: string; password?: string; position: string; subjectGroup: string }) {
+export async function createUserByAdmin(data: { name: string; email: string; password?: string; position: string; subjectGroup: string; employeeCode?: string; phone?: string; dutyDay?: string; advisoryClass?: string; }) {
   await requireAdmin();
 
   if (!data.email) {

@@ -99,7 +99,7 @@ export default function SmartAttendanceTable({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-slate-900 dark:text-white">{student.fullName}</span>
-                      <span className="text-[10px] text-slate-400">{student.studentId}</span>
+                      <span className="text-[10px] text-slate-400">{student.studentCode}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

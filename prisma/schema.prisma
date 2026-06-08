@@ -7,23 +7,55 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
+  id            String  @id @default(cuid())
   name          String?
-  email         String         @unique
-  emailVerified Boolean        @default(false)
+  email         String  @unique
+  emailVerified Boolean @default(false)
   image         String?
   signatureUrl  String?
-  isApproved    Boolean        @default(false)
-  role          String         @default("TEACHER") // ADMIN, TEACHER
+  isApproved    Boolean @default(false)
+  role          String  @default("TEACHER") // ADMIN, TEACHER
   position      String? // ครู, หัวหน้าหมวด, ผู้บริหาร, แอดมิน
   subjectGroup  String?
-  lineUserId    String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+
+  // New Fields
+  employeeCode  String?
+  phone         String?
+  dutyDay       String? // วันเวรประจำสัปดาห์
+  advisoryClass String? // ครูที่ปรึกษา(ชั้น)
+  preferences   String? // JSON string for custom shortcuts etc.
+
+  licenseFileUrl String?
+  salary         Float?
+  baseSalary     Float?
+  birthDate      DateTime?
+
+  lineUserId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   sessions      Session[]
   accounts      Account[]
   leaveRequests LeaveRequest[]
   schedules     Schedule[]
+
+  // New Relations
+  createdDocs   DocumentWorkflow[]   @relation("DocCreator")
+  approvedDocs  DocumentWorkflow[]   @relation("DocApprover")
+  reportedMaint MaintenanceRequest[] @relation("MaintenanceReporter")
+  assignedMaint MaintenanceRequest[] @relation("MaintenanceAssignee")
+
+  lessonPlans           LessonPlan[]
+  postRecords           PostTeachingRecord[]
+  researches            ClassroomResearch[]
+  supervisions          Supervision[]        @relation("SupervisedTeacher")
+  supervisorLogs        Supervision[]        @relation("Supervisor")
+  resourceBookings      ResourceBooking[]
+  absentSubstitutions   SubstitutionLog[]    @relation("AbsentTeacherRelation")
+  assignedSubstitutions SubstitutionLog[]    @relation("SubstituteTeacherRelation")
+
+  subjectAssignments TeacherSubjectAssignment[]
+  teacherConstraint  TeacherConstraint?
 }
 
 model Session {
@@ -74,16 +106,43 @@ model LeaveRequest {
 }
 
 model SystemSettings {
-  id                     String   @id @default("default")
-  schoolName             String   @default("ชื่อโรงเรียน")
-  subheader              String   @default("ระบบจัดการการลา")
+  id                     String  @id @default("default")
+  schoolName             String  @default("ชื่อโรงเรียน")
+  subheader              String  @default("ระบบจัดการการลา")
   logoUrl                String?
-  footerText             String   @default("© 2026 ระบบการลา")
-  developerSecret        String   @default("admin1234") // Default secret
+  footerText             String  @default("© 2026 ระบบการลา")
+  developerSecret        String  @default("admin1234") // Default secret
   lineChannelAccessToken String?
   lineTargetGroupId      String?
-  leaveRules             String   @default("การลากิจต้องยื่นคำขอล่วงหน้าอย่างน้อย 3 วันทำการ\nการลาป่วยติดต่อกันเกิน 3 วัน ต้องแนบใบรับรองแพทย์\nระบบจะส่งแจ้งเตือนให้หัวหน้าหมวดของท่านพิจารณาเป็นลำดับแรก")
-  updatedAt              DateTime @updatedAt
+  leaveRules             String  @default("การลากิจต้องยื่นคำขอล่วงหน้าอย่างน้อย 3 วันทำการ\nการลาป่วยติดต่อกันเกิน 3 วัน ต้องแนบใบรับรองแพทย์\nระบบจะส่งแจ้งเตือนให้หัวหน้าหมวดของท่านพิจารณาเป็นลำดับแรก")
+
+  // LINE parent group settings
+  lineGroupCode      String?
+  lineGroupInviteUrl String?
+
+  // New Settings
+  memoDepartments      String? // JSON config for enabled departments
+  maintenanceAssignees String? // JSON array of user IDs responsible for maintenance
+  linePermissions      String? // JSON config for who can broadcast
+
+  // Term & Year Setup
+  activeYear String @default("2569")
+  activeTerm String @default("1")
+
+  // Document Registry Prefixes and Sequences
+  docPrefixMemo         String @default("บข")
+  docPrefixOrder        String @default("คส")
+  docPrefixOutbound     String @default("นส")
+  docPrefixAnnouncement String @default("ปศ")
+
+  docSeqMemo         Int @default(1)
+  docSeqOrder        Int @default(1)
+  docSeqOutbound     Int @default(1)
+  docSeqAnnouncement Int @default(1)
+
+  docDeptCategoryToggle Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
 }
 
 model LeaveConfig {
@@ -125,78 +184,596 @@ model SystemBackup {
 }
 
 // ==========================================
+// New Models: Operations & Academics
+// ==========================================
+
+model Student {
+  id          String   @id @default(cuid())
+  studentCode String   @unique
+  fullName    String
+  nickname    String?
+  classroom   String
+  seatNumber  Int?
+  gender      String
+  status      String   @default("ปกติ") // ปกติ, เสี่ยง, ช่วยเหลือเร่งด่วน
+  parentName  String?
+  parentPhone String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  healthVisits  HealthVisit[]
+  subjectScores SubjectScore[]
+
+  weight          Float?
+  height          Float?
+  homeVisit       StudentHomeVisit?
+  profile         StudentProfile?
+  behaviorLogs    BehaviorLog[]
+  sdqAssessments  SdqAssessment[]
+  exitPermits     StudentExitPermit[]
+  libraryVisits   LibraryVisit[]
+  clubEnrollments ClubEnrollment[]
+
+  // New compliance field
+  idCardType String @default("CITIZEN_ID") // CITIZEN_ID, G_CODE
+}
+
+model HealthVisit {
+  id               String   @id @default(cuid())
+  studentId        String
+  time             String // e.g., "10:30"
+  symptoms         String
+  firstAid         String
+  medicine         String?
+  medicineQuantity Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model SubjectScore {
+  id        String @id @default(cuid())
+  studentId String
+  subjectId String
+  termId    String
+
+  preMidterm  String @default("[]") // JSON array of 5 inputs
+  midterm     Float?
+  postMidterm String @default("[]") // JSON array of 5 inputs
+  final       Float?
+
+  totalScore Float?
+  grade      String? // e.g. "4", "3.5", "ร", "มส"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  term    AcademicTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId, termId])
+}
+
+model DocumentWorkflow {
+  id         String   @id @default(cuid())
+  documentNo String   @unique // Auto-running e.g. "ศธ0401/1"
+  title      String
+  type       String // Memo, Order, Outbound, Announcement
+  department String? // Academics, HR, Budget, General, Activities, School
+  status     String   @default("DRAFT") // DRAFT, PENDING, APPROVED, REJECTED
+  createdBy  String // userId
+  approvedBy String? // userId
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  creator  User  @relation("DocCreator", fields: [createdBy], references: [id])
+  approver User? @relation("DocApprover", fields: [approvedBy], references: [id])
+}
+
+model MaintenanceRequest {
+  id          String    @id @default(cuid())
+  location    String
+  item        String
+  description String
+  status      String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  reporterId  String // userId
+  assigneeId  String? // userId
+  reportedAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  reporter User  @relation("MaintenanceReporter", fields: [reporterId], references: [id])
+  assignee User? @relation("MaintenanceAssignee", fields: [assigneeId], references: [id])
+}
+
+// ==========================================
 // Timetable App Models (ระบบจัดตารางสอน)
 // ==========================================
 
 model AcademicTerm {
-  id        String   @id @default(cuid())
-  year      String   // e.g. "2567"
-  term      String   // e.g. "1", "2"
-  isCurrent Boolean  @default(false)
-  
-  schedules Schedule[]
+  id        String  @id @default(cuid())
+  year      String // e.g. "2567"
+  term      String // e.g. "1", "2"
+  isCurrent Boolean @default(false)
+
+  schedules     Schedule[]
+  subjectScores SubjectScore[]
 }
 
 model Subject {
-  id          String   @id @default(cuid())
-  code        String   @unique // รหัสวิชา e.g. "ว31101"
-  name        String   // ชื่อวิชา e.g. "วิทยาศาสตร์"
-  credit      Float?   // หน่วยกิต e.g. 1.5
-  hours       Int?     // จำนวนคาบต่อสัปดาห์
-  color       String?  // สีประจำวิชาสำหรับแสดงบน UI
-  
-  schedules   Schedule[]
+  id     String  @id @default(cuid())
+  code   String  @unique // รหัสวิชา e.g. "ว31101"
+  name   String // ชื่อวิชา e.g. "วิทยาศาสตร์"
+  credit Float? // หน่วยกิต e.g. 1.5
+  hours  Int? // จำนวนคาบต่อสัปดาห์
+  color  String? // สีประจำวิชาสำหรับแสดงบน UI
+
+  schedules     Schedule[]
+  subjectScores SubjectScore[]
+  lessonPlans   LessonPlan[]
+  researches    ClassroomResearch[]
+
+  teacherAssignments TeacherSubjectAssignment[]
 }
 
 model Classroom {
-  id        String   @id @default(cuid())
-  name      String   @unique // e.g. "ม.1/1"
-  grade     String?  // e.g. "ม.1"
-  room      String?  // e.g. "1"
-  
+  id          String  @id @default(cuid())
+  name        String  @unique // e.g. "ม.1/1"
+  grade       String? // e.g. "ม.1"
+  room        String? // e.g. "1"
+  lineGroupId String? // LINE Group ID for messaging targeting
+
   schedules Schedule[]
 }
 
 model Room {
-  id        String   @id @default(cuid())
-  name      String   @unique // e.g. "ห้องวิทย์ 1", "301"
-  building  String?  // อาคาร
-  
-  schedules Schedule[]
+  id       String  @id @default(cuid())
+  name     String  @unique // e.g. "ห้องวิทย์ 1", "301"
+  building String? // อาคาร
+
+  schedules  Schedule[]
+  activities Activity[]
 }
 
 model Period {
-  id        String   @id @default(cuid())
-  name      String   // e.g. "คาบ 1"
-  order     Int      // ลำดับคาบ 1, 2, 3
-  startTime String   // e.g. "08:30"
-  endTime   String   // e.g. "09:20"
-  
-  schedules Schedule[]
+  id        String @id @default(cuid())
+  name      String // e.g. "คาบ 1"
+  order     Int // ลำดับคาบ 1, 2, 3
+  startTime String // e.g. "08:30"
+  endTime   String // e.g. "09:20"
+
+  schedules     Schedule[]
+  substitutions SubstitutionLog[]
+  activities    Activity[]
 }
 
 model Schedule {
-  id             String       @id @default(cuid())
-  dayOfWeek      Int          // 1=Monday, 2=Tuesday, ..., 5=Friday
-  
+  id        String @id @default(cuid())
+  dayOfWeek Int // 1=Monday, 2=Tuesday, ..., 5=Friday
+
   // Relationships
-  userId         String       // ครูผู้สอน
-  subjectId      String       // วิชา
-  classroomId    String       // ห้องเรียนที่เรียน
-  roomId         String?      // ห้องสถานที่เรียน
-  periodId       String       // คาบเรียน
-  termId         String       // ปีการศึกษา/ภาคเรียน
+  userId      String // ครูผู้สอน
+  subjectId   String // วิชา
+  classroomId String // ห้องเรียนที่เรียน
+  roomId      String? // ห้องสถานที่เรียน
+  periodId    String // คาบเรียน
+  termId      String // ปีการศึกษา/ภาคเรียน
 
-  user           User         @relation(fields: [userId], references: [id])
-  subject        Subject      @relation(fields: [subjectId], references: [id])
-  classroom      Classroom    @relation(fields: [classroomId], references: [id])
-  room           Room?        @relation(fields: [roomId], references: [id])
-  period         Period       @relation(fields: [periodId], references: [id])
-  term           AcademicTerm @relation(fields: [termId], references: [id])
+  user      User         @relation(fields: [userId], references: [id])
+  subject   Subject      @relation(fields: [subjectId], references: [id])
+  classroom Classroom    @relation(fields: [classroomId], references: [id])
+  room      Room?        @relation(fields: [roomId], references: [id])
+  period    Period       @relation(fields: [periodId], references: [id])
+  term      AcademicTerm @relation(fields: [termId], references: [id])
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, dayOfWeek, periodId, termId]) // ครูคนเดิม ห้ามสอนซ้ำคาบเดียวกันในวันเดียวกันของเทอมนั้น
   @@unique([classroomId, dayOfWeek, periodId, termId]) // นักเรียนห้องเดิม ห้ามมีเรียนซ้ำคาบเดียวกัน
+}
+
+// ==========================================
+// NEW EXPANSION MODELS
+// ==========================================
+
+model LessonPlan {
+  id         String   @id @default(cuid())
+  userId     String // ผู้จัดทำแผน
+  subjectId  String // วิชา
+  title      String
+  objective  String
+  content    String
+  activities String
+  media      String?
+  evaluation String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user        User                 @relation(fields: [userId], references: [id])
+  subject     Subject              @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  postRecords PostTeachingRecord[]
+}
+
+model PostTeachingRecord {
+  id           String   @id @default(cuid())
+  lessonPlanId String
+  userId       String
+  problems     String
+  solutions    String
+  suggestions  String
+  createdAt    DateTime @default(now())
+
+  lessonPlan LessonPlan @relation(fields: [lessonPlanId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+}
+
+model ClassroomResearch {
+  id              String   @id @default(cuid())
+  title           String
+  subjectId       String
+  classroom       String
+  problems        String
+  methodology     String
+  results         String
+  recommendations String
+  userId          String // researcher
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+}
+
+model Supervision {
+  id           String   @id @default(cuid())
+  scheduleId   String
+  supervisorId String // userId of supervisor
+  teacherId    String // userId of teacher being supervised
+  score        Float
+  feedback     String
+  supervisedAt DateTime
+  createdAt    DateTime @default(now())
+
+  teacher    User @relation("SupervisedTeacher", fields: [teacherId], references: [id])
+  supervisor User @relation("Supervisor", fields: [supervisorId], references: [id])
+}
+
+model ResourceBooking {
+  id           String   @id @default(cuid())
+  resourceType String // ROOM, VEHICLE
+  resourceName String // e.g. "ห้องประชุม 1", "รถตู้ กข-1234"
+  userId       String // requester
+  startTime    DateTime
+  endTime      DateTime
+  purpose      String
+  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Club {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  advisor     String // Teacher name
+  capacity    Int
+  description String?
+  enrollments ClubEnrollment[]
+  createdAt   DateTime         @default(now())
+}
+
+model ClubEnrollment {
+  id        String   @id @default(cuid())
+  clubId    String
+  studentId String
+  status    String   @default("APPROVED") // PENDING, APPROVED
+  createdAt DateTime @default(now())
+
+  club    Club    @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, studentId])
+}
+
+model LibraryVisit {
+  id           String    @id @default(cuid())
+  studentId    String
+  checkInTime  DateTime  @default(now())
+  checkOutTime DateTime?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model StudentProfile {
+  id        String  @id @default(cuid())
+  studentId String  @unique
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Personal Info (ข้อมูลส่วนตัว)
+  nationalId        String   @unique
+  nickname          String?
+  birthDate         DateTime
+  nationality       String
+  race              String
+  religion          String
+  bloodType         String
+  weight            Float
+  height            Float
+  congenitalDisease String?
+  disabilityType    String? // ประเภทความบกพร่อง/ด้อยโอกาส
+  disadvantageType  String? // ประเภทความด้อยโอกาส
+  profileImage      String? // รูปประจำตัวนักเรียน
+
+  // Birthplace & Previous School
+  birthProvince  String
+  birthAmphoe    String
+  birthTambon    String
+  previousSchool String
+  moveInReason   String?
+
+  // Family Info
+  familyStatus        String // พ่อแม่อยู่ด้วยกัน, แยกกันอยู่, พ่อ/แม่ทอดทิ้ง, ฯลฯ
+  livingWith          String // อาศัยอยู่กับ: พ่อ/แม่, ญาติ, อยู่ลำพัง, ครัวเรือนสถาบัน
+  closestMember       String // สมาชิกครอบครัวที่สนิทที่สุด
+  timeSpentTogether   Float // คะแนนการทำกิจกรรมร่วมกันในครอบครัว
+  siblingsSameParents Int    @default(0) // พี่น้องร่วมบิดมารดา
+  siblingsDiffParents Int    @default(0) // พี่น้องต่างบิดามารดา
+
+  familyMembers FamilyMember[]
+}
+
+model FamilyMember {
+  id                String         @id @default(cuid())
+  profileId         String
+  profile           StudentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  relation          String // บิดา, มารดา, พี่, น้อง, ผู้ปกครอง
+  name              String
+  nationalId        String? // เลขประจำตัว (ระบุถ้าไม่มีได้)
+  hasNoId           Boolean        @default(false)
+  education         String // การศึกษาสูงสุด
+  age               Int
+  hasDisability     Boolean        @default(false) // มีความพิการทางร่างกาย/สติปัญญา
+  hasChronicDisease Boolean        @default(false) // มีโรคเรื้อรัง (ไม่รวมความดัน/เบาหวาน)
+
+  // New Fields for Father, Mother, Guardian high-fidelity info
+  prefix String?
+  phone  String?
+  job    String?
+  status String?
+  health String?
+
+  // Income splits (รายได้แยกประเภทต่อเดือน)
+  wages              Float @default(0.0) // ค่าจ้าง/เงินเดือน
+  agriculturalIncome Float @default(0.0) // อาชีพเกษตรกรรม (หลังหักต้นทุน)
+  businessIncome     Float @default(0.0) // ธุรกิจส่วนตัว (หลังหักต้นทุน)
+  welfareIncome      Float @default(0.0) // สวัสดิการจากรัฐ
+  otherIncome        Float @default(0.0) // รายได้จากแหล่งอื่นๆ
+  totalMonthlyIncome Float @default(0.0)
+}
+
+model StudentHomeVisit {
+  id        String  @id @default(cuid())
+  studentId String  @unique
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Visit Registry Info
+  visitStatus       String    @default("PENDING") // PENDING, COMPLETED, NOT_FOUND
+  lastVisitDate     DateTime?
+  recordedBy        String? // ชื่อครูผู้บันทึก
+  informantRelation String? // ผู้ให้ข้อมูล เช่น บิดา, มารดา, ปู่ย่า
+
+  // Location & Photos
+  latitude        Float?
+  longitude       Float?
+  imgHouseOutside String? // URL รูปภายนอก (เห็นหลังคาและฝาผนัง)
+  imgHouseInside  String? // URL รูปภายใน (เห็นพื้นและภายใน)
+  photoSource     String? // ครูลงพื้นที่ถ่ายเอง / นักเรียนส่งให้
+  noPhotoReason   String? // ข้อยกเว้น: อยู่ต่างจังหวัด, ต่างประเทศ, ไม่อนุญาตให้ถ่าย
+
+  // Housing Conditions
+  livingArrangements  String? // บ้านตนเอง, บ้านเช่า, อยู่ฟรี, หอพัก
+  rentalFee           Float? // ค่าเช่า (ถ้ามี)
+  houseNumber         String?
+  villageNo           String?
+  buildingFloor       String? // วัสดุพื้น
+  buildingWall        String? // วัสดุผนัง
+  buildingRoof        String? // วัสดุหลังคา
+  toiletCondition     String? // สภาพสุขา (มี/ไม่มี)
+  drinkingWater       String? // น้ำดื่ม
+  electricity         String? // ไฟฟ้า
+  cleanliness         String? // ความสะอาด
+  safety              String? // ความปลอดภัย
+  surroundingEnv      String? // สภาพแวดล้อมรอบบ้าน
+  disasterSafety      String? // ความปลอดภัยจากภัยพิบัติ
+  agriculturalLand    String? // ที่ดินทำกิน (ไม่ทำเกษตร / มีที่ดินแบ่งตามขนาด)
+  vehicles            String? // ยานพาหนะ (JSON - รถยนต์, มอเตอร์ไซค์, ระบุอายุเกิน/ไม่เกิน 15 ปี)
+  householdAppliances String? // เครื่องใช้ไฟฟ้าหลักที่มี (JSON)
+
+  // Economic & Commute
+  totalHouseholdIncome Float   @default(0.0)
+  householdMembers     Int     @default(1)
+  incomePerCapita      Float   @default(0.0) // รายได้เฉลี่ยต่อคน (คำนวณอัตโนมัติ)
+  welfareStatus        String? // การรับสวัสดิการรัฐ
+  dependents           String? // ภาระพึ่งพิง (JSON)
+  dailyAllowance       Float   @default(0.0) // เงินมาโรงเรียนต่อวัน
+  travelMethod         String? // วิธีเดินทาง
+  distanceToSchool     Float   @default(0.0) // ระยะทาง (กิโลเมตร)
+  travelTimeMins       Int     @default(0) // เวลาเดินทางไป-กลับ (นาที)
+  travelCost           Float?  @default(0.0) // ค่าเดินทางต่อเดือน (บาท)
+
+  // Institutional Household Details (หากอยู่ในครัวเรือนสถาบัน)
+  isInstitutional      Boolean @default(false)
+  institutionType      String?
+  institutionName      String?
+  institutionProvince  String?
+  institutionManager   String?
+  institutionPhone     String?
+  institutionEntryDate String? // ด/ป ที่เข้าพัก
+  institutionBoarding  String? // ประจำ / ไปกลับ
+  institutionHelp      String? // ความช่วยเหลือที่ได้รับ (JSON)
+  institutionExpense   Float? // รายจ่ายเฉลี่ยต่อปี
+  institutionChildren  Int? // จำนวนเด็ก
+  institutionIncome    Float? // รายรับสถาบัน
+  institutionAssets    String? // สินทรัพย์สถาบัน (JSON)
+
+  // Teacher Summary & Parental Concerns
+  parentConcerns   String?
+  schoolHelpNeeded String?
+  educationalPlans String?
+  teacherSummary   String?
+
+  // Legal Certifications (การรับรองทางกฎหมาย)
+  officerName           String? // ชื่อเจ้าหน้าที่รัฐรับรอง
+  officerIdCard         String? // เลขบัตร ปชช เจ้าหน้าที่
+  officerPosition       String? // ตำแหน่งเจ้าหน้าที่
+  officerRecommendation String? // เห็นควร / ไม่เห็นควรให้ทุน
+  officerCertifiedAt    DateTime? // วันที่เจ้าหน้าที่เซ็น
+  directorCertifiedAt   DateTime? // วันที่ ผอ. ยืนยัน
+
+  // Backward compatibility fields
+  distanceKm     Float?
+  familyIncome   Float?
+  eefStatus      String   @default("PENDING") // ELIGIBLE, INELIGIBLE, PENDING
+  houseCondition String? // Details for Nor Por 01
+  remarks        String?
+  visitedAt      DateTime @default(now())
+}
+
+model BehaviorLog {
+  id          String   @id @default(cuid())
+  studentId   String
+  type        String // DEDUCTION, MERIT
+  points      Int
+  description String
+  loggedBy    String // Teacher name/ID
+  createdAt   DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model SdqAssessment {
+  id                 String   @id @default(cuid())
+  studentId          String
+  assessorType       String // TEACHER, STUDENT, PARENT
+  emotionalScore     Int      @default(0)
+  conductScore       Int      @default(0)
+  hyperactivityScore Int      @default(0)
+  peerScore          Int      @default(0)
+  prosocialScore     Int      @default(0)
+  totalScore         Int      @default(0)
+  riskStatus         String   @default("NORMAL") // NORMAL, BORDERLINE, RISK
+  answers            String   @default("{}") // JSON string of answers
+  createdAt          DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model StudentExitPermit {
+  id             String   @id @default(cuid())
+  studentId      String
+  reason         String
+  destination    String
+  approvedBy     String? // name of approver
+  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  lineSentStatus Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model SubstitutionLog {
+  id                  String   @id @default(cuid())
+  date                DateTime // วันที่สอนแทน
+  absentTeacherId     String
+  substituteTeacherId String
+  periodId            String
+  subjectCode         String
+  subjectName         String
+  classroom           String
+  remark              String?
+
+  absentTeacher     User   @relation("AbsentTeacherRelation", fields: [absentTeacherId], references: [id], onDelete: Cascade)
+  substituteTeacher User   @relation("SubstituteTeacherRelation", fields: [substituteTeacherId], references: [id], onDelete: Cascade)
+  period            Period @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date, substituteTeacherId, periodId]) // ครูผู้สอนแทนต้องไม่สอนแทนซ้ำคาบในวันเดียวกัน
+}
+
+model TeacherSubjectAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  subjectId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, subjectId])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  name        String
+  type        String // "FIXED_ALL", "GRADE_SPECIFIC", "MIXED_CLUB"
+  dayOfWeek   Int
+  periodId    String
+  gradeFilter String?
+  clubId      String?
+  roomId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  period Period @relation(fields: [periodId], references: [id])
+  room   Room?  @relation(fields: [roomId], references: [id])
+}
+
+model TeacherConstraint {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  maxHoursPerWeek  Int      @default(20)
+  unavailableSlots String // JSON string
+  lunchPeriodOrder Int      @default(5)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AutoSubstituteConfig {
+  id              String   @id @default("default")
+  isEnabled       Boolean  @default(true)
+  priority1Weight Float    @default(1.0)
+  priority2Weight Float    @default(0.8)
+  priority3Weight Float    @default(0.5)
+  allowedPeriods  String   @default("[1,2,3,4,6,7,8]")
+  updatedAt       DateTime @updatedAt
+}
+
+model SubjectAttendance {
+  id          String   @id @default(cuid())
+  classroomId String
+  subjectId   String
+  periodId    String
+  date        DateTime
+  records     String // JSON string of studentId -> status (present, late, absent, sick, leave)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([classroomId, subjectId, periodId, date])
+}
+
+model AcademicEvent {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  color       String?   @default("#4f46e5")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

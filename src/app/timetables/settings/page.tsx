@@ -34,7 +34,9 @@ export default function TimetableSettingsPage() {
     settings: {
       deptHeads: {},
       allowTeacherSelfAssign: true,
-      pageAccess: {}
+      pageAccess: {},
+      subAdmins: [],
+      substitutePermissionMode: "admin_only"
     }
   });
 
@@ -43,9 +45,15 @@ export default function TimetableSettingsPage() {
   // Local state for settings form
   const [deptHeads, setDeptHeads] = useState<Record<string, string>>({});
   const [allowTeacherSelfAssign, setAllowTeacherSelfAssign] = useState(true);
+  const [subAdminsState, setSubAdminsState] = useState<string[]>([]);
+  const [substitutePermissionMode, setSubstitutePermissionMode] = useState("admin_only");
 
   const role = (session?.user as any)?.role?.toLowerCase() || "teacher";
   const isAdmin = role === "admin" || session?.user?.email === "admin@school.os";
+  
+  const subAdmins = registry.settings?.subAdmins || [];
+  const isSubAdmin = session?.user?.id ? subAdmins.includes(session.user.id) : false;
+  const hasAdminAccess = isAdmin || isSubAdmin;
 
   const loadData = async () => {
     setLoading(true);
@@ -55,20 +63,24 @@ export default function TimetableSettingsPage() {
     ]);
 
     if (regRes.success && regRes.data) {
+      const currentSettings = regRes.data.settings || {};
       setRegistry({
         curriculums: regRes.data.curriculums || [],
         classPlanMap: regRes.data.classPlanMap || {},
         workloads: regRes.data.workloads || [],
-        settings: regRes.data.settings || {
-          deptHeads: {},
-          allowTeacherSelfAssign: true,
-          pageAccess: {}
+        settings: {
+          deptHeads: currentSettings.deptHeads || {},
+          allowTeacherSelfAssign: currentSettings.allowTeacherSelfAssign ?? true,
+          pageAccess: currentSettings.pageAccess || {},
+          subAdmins: currentSettings.subAdmins || [],
+          substitutePermissionMode: currentSettings.substitutePermissionMode || "admin_only"
         }
       });
       
-      const currentSettings = regRes.data.settings || {};
       setDeptHeads(currentSettings.deptHeads || {});
       setAllowTeacherSelfAssign(currentSettings.allowTeacherSelfAssign ?? true);
+      setSubAdminsState(currentSettings.subAdmins || []);
+      setSubstitutePermissionMode(currentSettings.substitutePermissionMode || "admin_only");
     }
 
     if (dbRes.success && dbRes.data) {
@@ -83,7 +95,7 @@ export default function TimetableSettingsPage() {
   }, []);
 
   const handleSaveSettings = async () => {
-    if (!isAdmin) return;
+    if (!hasAdminAccess) return;
     setIsSubmitting(true);
 
     const updatedRegistry = {
@@ -91,7 +103,9 @@ export default function TimetableSettingsPage() {
       settings: {
         ...registry.settings,
         deptHeads,
-        allowTeacherSelfAssign
+        allowTeacherSelfAssign,
+        subAdmins: subAdminsState,
+        substitutePermissionMode
       }
     };
 
@@ -147,7 +161,7 @@ export default function TimetableSettingsPage() {
             </p>
           </div>
         </div>
-        {isAdmin && (
+        {hasAdminAccess && (
           <button
             onClick={handleSaveSettings}
             disabled={isSubmitting}
@@ -163,10 +177,10 @@ export default function TimetableSettingsPage() {
         )}
       </div>
 
-      {!isAdmin && (
+      {!hasAdminAccess && (
         <div className="p-3.5 bg-amber-500/5 text-amber-800 dark:text-amber-300 border border-amber-500/10 rounded-xl flex items-center gap-2 text-xs font-semibold">
           <ShieldAlert className="w-4 h-4 shrink-0" />
-          <span>โหมดดูข้อมูลเท่านั้น: เฉพาะแอดมินหรือผู้บริหารเท่านั้นที่สามารถแก้ไขการมอบหมายสิทธิ์ระบบตารางสอนได้</span>
+          <span>โหมดดูข้อมูลเท่านั้น: เฉพาะแอดมินหรือผู้ได้รับสิทธิ์ตั้งค่าตารางสอนเท่านั้นที่สามารถแก้ไขการมอบหมายสิทธิ์ระบบได้</span>
         </div>
       )}
 
@@ -190,8 +204,8 @@ export default function TimetableSettingsPage() {
                   <span className="sm:w-1/2">{dept}</span>
                   <select
                     value={currentHeadId}
-                    onChange={(e) => isAdmin && handleDeptHeadChange(dept, e.target.value)}
-                    disabled={!isAdmin}
+                    onChange={(e) => hasAdminAccess && handleDeptHeadChange(dept, e.target.value)}
+                    disabled={!hasAdminAccess}
                     className="sm:w-1/2 bg-background border border-border rounded-lg p-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium disabled:opacity-75"
                   >
                     <option value="">-- ยังไม่ได้กำหนด --</option>
@@ -228,8 +242,8 @@ export default function TimetableSettingsPage() {
               <input
                 type="checkbox"
                 checked={allowTeacherSelfAssign}
-                onChange={(e) => isAdmin && setAllowTeacherSelfAssign(e.target.checked)}
-                disabled={!isAdmin}
+                onChange={(e) => hasAdminAccess && setAllowTeacherSelfAssign(e.target.checked)}
+                disabled={!hasAdminAccess}
                 className="w-4 h-4 text-primary border-border focus:ring-primary cursor-pointer disabled:opacity-75"
               />
             </div>
@@ -251,6 +265,66 @@ export default function TimetableSettingsPage() {
                 </>
               )}
             </div>
+          </div>
+
+          {/* Sub-Admins setting */}
+          <div className="p-5 bg-card border border-border/80 rounded-xl shadow-sm space-y-4">
+            <h3 className="text-xs uppercase font-extrabold text-foreground flex items-center gap-1.5 tracking-wider border-b border-border/60 pb-2">
+              <Shield className="w-4 h-4 text-primary" />
+              ผู้ดูแลระบบจัดตารางสอนย่อย (Sub-Admins)
+            </h3>
+            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
+              มอบหมายครูผู้สอนท่านอื่นให้ได้รับสิทธิ์การจัดตารางสอนและการตั้งค่าตารางสอนได้เสมือนแอดมินหลัก
+            </p>
+
+            <div className="max-h-40 overflow-y-auto space-y-2 pr-1 border border-border/50 rounded-lg p-2 bg-background/50">
+              {dbTeachers.map((t) => {
+                const isSelected = subAdminsState.includes(t.id);
+                return (
+                  <label key={t.id} className="flex items-center gap-2 text-xs font-bold text-foreground cursor-pointer hover:bg-muted/30 p-1.5 rounded transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      disabled={!hasAdminAccess}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSubAdminsState(prev => [...prev, t.id]);
+                        } else {
+                          setSubAdminsState(prev => prev.filter(id => id !== t.id));
+                        }
+                      }}
+                      className="w-4 h-4 text-primary border-border focus:ring-primary cursor-pointer disabled:opacity-75"
+                    />
+                    <div>
+                      <span className="block font-bold">{t.fullName}</span>
+                      <span className="block text-[9px] text-muted-foreground font-medium">{t.email}</span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Substitution Permission settings */}
+          <div className="p-5 bg-card border border-border/80 rounded-xl shadow-sm space-y-4">
+            <h3 className="text-xs uppercase font-extrabold text-foreground flex items-center gap-1.5 tracking-wider border-b border-border/60 pb-2">
+              <Users className="w-4 h-4 text-primary" />
+              สิทธิ์การจัดครูสอนแทนประจำวัน
+            </h3>
+            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
+              เลือกขอบเขตสิทธิ์ของคุณครูที่จะเข้ามาทำหน้าที่บันทึกหรือสลับตารางสำหรับครูผู้ลาในแต่ละวัน
+            </p>
+
+            <select
+              value={substitutePermissionMode}
+              disabled={!hasAdminAccess}
+              onChange={(e) => setSubstitutePermissionMode(e.target.value)}
+              className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-bold disabled:opacity-75"
+            >
+              <option value="admin_only">เฉพาะผู้ดูแลระบบและ Sub-Admin เท่านั้น</option>
+              <option value="dept_heads">แอดมิน, Sub-Admin และหัวหน้ากลุ่มสาระฯ</option>
+              <option value="all">เปิดให้ครูทุกคนจัดสอนแทนได้ (อิสระ)</option>
+            </select>
           </div>
 
           <div className="p-5 bg-card border border-border/80 rounded-xl shadow-sm space-y-3">

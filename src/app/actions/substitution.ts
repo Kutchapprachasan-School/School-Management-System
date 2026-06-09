@@ -2,6 +2,64 @@
 
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { requireAdmin, getCurriculumRegistry } from "./timetable_registry";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
+async function getSession() {
+  let session = null;
+  try {
+    session = await auth.api.getSession({
+      headers: await headers(),
+    });
+  } catch (err) {
+    console.warn("Session retrieval failed:", err);
+  }
+  return session;
+}
+
+export async function requireSubstitutionPermission() {
+  const session = await getSession();
+  if (!session?.user) {
+    throw new Error("กรุณาเข้าสู่ระบบ");
+  }
+
+  // 1. If system admin, automatically allowed
+  if (session.user.role === "ADMIN" || (session.user as any).position === "แอดมิน") {
+    return session;
+  }
+
+  // 2. Fetch timetable registry settings
+  const registryRes = await getCurriculumRegistry();
+  if (!registryRes.success || !registryRes.data) {
+    throw new Error("ไม่สามารถเรียกดูการตั้งค่าระบบได้");
+  }
+
+  const settings = registryRes.data.settings || {};
+  const subAdmins = settings.subAdmins || [];
+  const permissionMode = settings.substitutePermissionMode || "admin_only";
+
+  // 3. If timetable sub-admin, automatically allowed
+  if (subAdmins.includes(session.user.id)) {
+    return session;
+  }
+
+  // 4. Check permission modes
+  if (permissionMode === "all") {
+    return session;
+  }
+
+  if (permissionMode === "dept_heads") {
+    // Check if the user is one of the department heads
+    const deptHeads = settings.deptHeads || {};
+    const isHead = Object.values(deptHeads).includes(session.user.id);
+    if (isHead) {
+      return session;
+    }
+  }
+
+  throw new Error("ไม่มีสิทธิ์ในการจัดการจัดสอนแทน");
+}
 
 // Interface for substitution log payload
 export interface SubstitutionRecordInput {
@@ -242,6 +300,7 @@ export async function getSubstitutePageData(dateStr: string) {
 // 2. Save Daily Substitution Logs
 export async function saveSubstitutionLogs(records: SubstitutionRecordInput[]) {
   try {
+    await requireSubstitutionPermission();
     if (records.length === 0) {
       return { success: false, error: "ไม่มีข้อมูลบันทึก" };
     }
@@ -297,6 +356,7 @@ export async function saveSubstitutionLogs(records: SubstitutionRecordInput[]) {
 // 3. Delete a specific substitution log entry
 export async function deleteSubstitutionLog(id: string) {
   try {
+    await requireSubstitutionPermission();
     await prisma.substitutionLog.delete({
       where: { id }
     });
@@ -364,6 +424,7 @@ export async function updateAutoSubstituteConfig(data: any) {
 
 export async function broadcastSubstitutionToLine(logId: string) {
   try {
+    await requireSubstitutionPermission();
     const log = await prisma.substitutionLog.findUnique({
       where: { id: logId },
       include: {
@@ -396,6 +457,7 @@ export async function broadcastSubstitutionToLine(logId: string) {
 
     const { sendLineNotify } = await import("@/lib/line-notify");
     await sendLineNotify(message);
+    revalidatePath("/timetables/schedule");
     return { success: true, message: "ส่งข้อความคำสั่งปฏิบัติหน้าที่สอนแทนเข้า LINE กลุ่มเรียบร้อยแล้ว!" };
   } catch (error: any) {
     console.error("Error broadcasting substitution:", error);
@@ -403,3 +465,319 @@ export async function broadcastSubstitutionToLine(logId: string) {
   }
 }
 
+export async function addAbsentTeacherManually(userId: string, dateStr: string) {
+  try {
+    await requireSubstitutionPermission();
+
+    const targetDate = new Date(dateStr);
+    targetDate.setHours(0, 0, 0, 0);
+
+    // Check if there is already an approved leave request for this teacher on this date
+    const existing = await prisma.leaveRequest.findFirst({
+      where: {
+        userId,
+        status: "APPROVED",
+        startDate: { lte: new Date(dateStr + "T23:59:59Z") },
+        endDate: { gte: new Date(dateStr + "T00:00:00Z") }
+      }
+    });
+
+    if (existing) {
+      return { success: false, error: "ครูท่านนี้มีสถานะลาในระบบอยู่แล้ว" };
+    }
+
+    // Get user details
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return { success: false, error: "ไม่พบผู้ใช้ในระบบ" };
+    }
+
+    // Create a mock approved LeaveRequest
+    await prisma.leaveRequest.create({
+      data: {
+        userId,
+        type: "ลาภายนอกระบบ",
+        reason: "บันทึกข้อมูลครูผู้ลาเพิ่มเติมภายนอกระบบจัดสอนแทน",
+        status: "APPROVED",
+        startDate: targetDate,
+        endDate: targetDate
+      }
+    });
+
+    revalidatePath("/timetables/schedule");
+    return { success: true, message: `ระบุให้คุณครู ${user.name || user.email} เป็นผู้ลานอกระบบเรียบร้อย` };
+  } catch (error: any) {
+    return { success: false, error: "เกิดข้อผิดพลาดในการระบุครูผู้ลา: " + error.message };
+  }
+}
+
+export async function bulkAddAbsentTeachersManually(userIds: string[], dateStr: string) {
+  try {
+    await requireSubstitutionPermission();
+
+    const targetDate = new Date(dateStr);
+    targetDate.setHours(0, 0, 0, 0);
+
+    const startOfDay = new Date(dateStr + "T00:00:00.000Z");
+    const endOfDay = new Date(dateStr + "T23:59:59.999Z");
+
+    const addedNames: string[] = [];
+
+    for (const userId of userIds) {
+      // Check if there is already an approved leave request
+      const existing = await prisma.leaveRequest.findFirst({
+        where: {
+          userId,
+          status: "APPROVED",
+          startDate: { lte: endOfDay },
+          endDate: { gte: startOfDay }
+        }
+      });
+
+      if (existing) continue;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) continue;
+
+      // Create a mock approved LeaveRequest
+      await prisma.leaveRequest.create({
+        data: {
+          userId,
+          type: "ลาภายนอกระบบ",
+          reason: "บันทึกข้อมูลครูผู้ลาเพิ่มเติมภายนอกระบบจัดสอนแทน",
+          status: "APPROVED",
+          startDate: targetDate,
+          endDate: targetDate
+        }
+      });
+
+      addedNames.push(user.name || user.email);
+    }
+
+    revalidatePath("/timetables/schedule");
+    return { 
+      success: true, 
+      message: addedNames.length > 0 
+        ? `ระบุคุณครูผู้ลานอกระบบเรียบร้อยแล้ว ${addedNames.length} ท่าน: ${addedNames.join(", ")}`
+        : "ไม่มีคุณครูถูกระบุเพิ่มเติม (เนื่องจากมีสถานะลาอยู่แล้วหรือข้อมูลไม่ถูกต้อง)"
+    };
+  } catch (error: any) {
+    return { success: false, error: "เกิดข้อผิดพลาดในการระบุครูผู้ลา: " + error.message };
+  }
+}
+
+export async function removeAbsentTeacherManually(userId: string, dateStr: string) {
+  try {
+    await requireSubstitutionPermission();
+
+    const startOfDay = new Date(dateStr + "T00:00:00.000Z");
+    const endOfDay = new Date(dateStr + "T23:59:59.999Z");
+
+    // 1. Delete mock approved LeaveRequest (only manual mock leaves)
+    const delLeaves = await prisma.leaveRequest.deleteMany({
+      where: {
+        userId,
+        startDate: { gte: startOfDay, lte: endOfDay },
+        type: "ลาภายนอกระบบ"
+      }
+    });
+
+    if (delLeaves.count === 0) {
+      return { success: false, error: "ไม่สามารถยกเลิกได้ เนื่องจากไม่ใช่การระบุผู้ลานอกระบบ หรือไม่มีสถานะลาอยู่" };
+    }
+
+    // 2. Clean up substitution logs where this teacher was absent on this date
+    await prisma.substitutionLog.deleteMany({
+      where: {
+        date: { gte: startOfDay, lte: endOfDay },
+        absentTeacherId: userId
+      }
+    });
+
+    revalidatePath("/timetables/schedule");
+    return { success: true, message: "ยกเลิกสถานะลาและประวัติการสอนแทนของคุณครูเรียบร้อยแล้ว" };
+  } catch (error: any) {
+    return { success: false, error: "เกิดข้อผิดพลาดในการยกเลิกผู้ลา: " + error.message };
+  }
+}
+
+export async function autoAssignSubstitutesForTeacher(absentTeacherId: string, dateStr: string) {
+  try {
+    await requireSubstitutionPermission();
+
+    const targetDate = new Date(dateStr);
+    targetDate.setHours(0, 0, 0, 0);
+
+    const dayOfWeek = targetDate.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return { success: false, error: "กรุณาเลือกวันจันทร์ - ศุกร์ สำหรับจัดสอนแทน" };
+    }
+
+    const term = await prisma.academicTerm.findFirst({
+      where: { isCurrent: true }
+    });
+    if (!term) {
+      return { success: false, error: "ไม่พบปีการศึกษาปัจจุบันในระบบ" };
+    }
+
+    // A. Fetch normal schedules for this teacher on this day of the week
+    const absentSchedules = await prisma.schedule.findMany({
+      where: {
+        termId: term.id,
+        dayOfWeek,
+        userId: absentTeacherId
+      },
+      include: {
+        period: true,
+        subject: true,
+        classroom: true
+      }
+    });
+
+    if (absentSchedules.length === 0) {
+      return { success: false, error: "คุณครูท่านนี้ไม่มีตารางสอนในวันที่เลือก" };
+    }
+
+    // B. Fetch all teachers (potential candidates)
+    const teachers = await prisma.user.findMany({
+      where: {
+        role: { in: ["TEACHER", "ADMIN", "admin", "teacher"] }
+      }
+    });
+
+    const absentTeacher = teachers.find(t => t.id === absentTeacherId);
+    const absentDept = absentTeacher?.subjectGroup;
+
+    // C. Fetch all approved leaves for today (including this teacher and others)
+    const startOfDay = new Date(dateStr + "T00:00:00.000Z");
+    const endOfDay = new Date(dateStr + "T23:59:59.999Z");
+    const leaves = await prisma.leaveRequest.findMany({
+      where: {
+        status: "APPROVED",
+        startDate: { lte: endOfDay },
+        endDate: { gte: startOfDay }
+      }
+    });
+    const absentUserIds = leaves.map(l => l.userId);
+
+    // D. Fetch all normal schedules for this day of the week
+    const schedules = await prisma.schedule.findMany({
+      where: {
+        termId: term.id,
+        dayOfWeek
+      }
+    });
+
+    // E. Fetch current substitution logs for this date
+    const existingLogs = await prisma.substitutionLog.findMany({
+      where: {
+        date: { gte: startOfDay, lte: endOfDay }
+      }
+    });
+
+    // F. Compute current workloads count for fitness scoring
+    const logsCount = await prisma.substitutionLog.groupBy({
+      by: ["substituteTeacherId"],
+      _count: { id: true }
+    });
+    const loads: Record<string, number> = {};
+    teachers.forEach(t => { loads[t.id] = 0; });
+    logsCount.forEach((item: any) => { loads[item.substituteTeacherId] = item._count.id; });
+
+    const subjectAssignments = await prisma.teacherSubjectAssignment.findMany();
+
+    // Track assigned candidates during this run
+    const assignedThisRun: Record<string, Record<string, boolean>> = {}; // periodId -> teacherId -> boolean
+
+    const newRecords = [];
+
+    // Loop through absent slots and find the best substitute
+    for (const s of absentSchedules) {
+      // Find candidates for period s.periodId
+      const candidates = teachers
+        .filter(t => !absentUserIds.includes(t.id) && t.id !== absentTeacherId) // Exclude all absent teachers
+        .map(t => {
+          // Check if teaching in normal schedule
+          const isTeachingNormal = schedules.some(sch => sch.userId === t.id && sch.periodId === s.periodId);
+          // Check if already subbing from DB logs
+          const isSubbingInDb = existingLogs.some(l => l.substituteTeacherId === t.id && l.periodId === s.periodId);
+          // Check if already subbing in this run
+          const isSubbingThisRun = assignedThisRun[s.periodId]?.[t.id] || false;
+
+          const isAvailable = !isTeachingNormal && !isSubbingInDb && !isSubbingThisRun;
+
+          let score = 0;
+          // Department or history teaching subject
+          const isSameGroup = t.subjectGroup && absentDept && t.subjectGroup === absentDept;
+          const hasHistory = subjectAssignments.some(sa => sa.userId === t.id && sa.subjectId === s.subjectId);
+          if (isSameGroup || hasHistory) score += 40;
+          if (!isTeachingNormal) score += 40;
+
+          // Workload balance score
+          const loadValues = Object.values(loads);
+          const minLoad = loadValues.length > 0 ? Math.min(...loadValues) : 0;
+          const maxLoad = loadValues.length > 0 ? Math.max(...loadValues) : 0;
+          const tLoad = loads[t.id] || 0;
+          let loadScore = 20;
+          if (maxLoad !== minLoad) {
+            loadScore = 20 * (1 - (tLoad - minLoad) / (maxLoad - minLoad));
+          }
+          score += loadScore;
+
+          return {
+            id: t.id,
+            name: t.name || t.email,
+            score: isAvailable ? Math.round(score) : -1,
+            isAvailable
+          };
+        })
+        .filter(c => c.isAvailable)
+        .sort((a, b) => b.score - a.score);
+
+      if (candidates.length > 0) {
+        const best = candidates[0];
+        newRecords.push({
+          date: targetDate,
+          absentTeacherId,
+          substituteTeacherId: best.id,
+          periodId: s.periodId,
+          subjectCode: s.subject.code,
+          subjectName: s.subject.name,
+          classroom: s.classroom.name,
+          remark: `จัดสอนแทนอัตโนมัติ (AI Auto) คะแนนความเหมาะสม ${best.score}%`
+        });
+
+        // Track assignment
+        if (!assignedThisRun[s.periodId]) assignedThisRun[s.periodId] = {};
+        assignedThisRun[s.periodId][best.id] = true;
+        loads[best.id] = (loads[best.id] || 0) + 1; // Update load in-memory for subsequent periods
+      }
+    }
+
+    if (newRecords.length === 0) {
+      return { success: false, error: "ไม่พบคุณครูผู้สอนแทนที่พร้อมปฏิบัติหน้าที่ในช่องเวลาดังกล่าว" };
+    }
+
+    // Clean up any old logs for this teacher on this day
+    await prisma.substitutionLog.deleteMany({
+      where: {
+        date: { gte: startOfDay, lte: endOfDay },
+        absentTeacherId
+      }
+    });
+
+    // Create logs
+    await prisma.substitutionLog.createMany({ data: newRecords });
+
+    revalidatePath("/timetables/schedule");
+    return { success: true, message: `จัดสอนแทนอัตโนมัติสำเร็จ ${newRecords.length} คาบเรียน!` };
+  } catch (error: any) {
+    return { success: false, error: "จัดสอนแทนล้มเหลว: " + error.message };
+  }
+}

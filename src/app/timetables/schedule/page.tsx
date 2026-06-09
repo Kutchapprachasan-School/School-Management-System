@@ -33,8 +33,8 @@ export default function SchedulePage() {
   const isAdmin = role === "admin" || session?.user?.email === "admin@school.os";
   const currentUserId = session?.user?.id;
 
-  const loadSelectionData = async () => {
-    setLoading(true);
+  const loadSelectionData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     const [classroomsRes, teachersRes, roomsRes, periodsRes] = await Promise.all([
       getClassrooms(),
       getTeachers(),
@@ -44,8 +44,8 @@ export default function SchedulePage() {
 
     if (classroomsRes.success && classroomsRes.data) {
       setClassrooms(classroomsRes.data);
-      // Default to first classroom if viewMode is classroom
-      if (classroomsRes.data.length > 0) {
+      // Default to first classroom if viewMode is classroom and viewId is not set
+      if (classroomsRes.data.length > 0 && !viewId) {
         setViewId(classroomsRes.data[0].id);
       }
     }
@@ -58,7 +58,7 @@ export default function SchedulePage() {
     if (periodsRes.success && periodsRes.data) {
       setPeriods(periodsRes.data);
     }
-    setLoading(false);
+    if (!isSilent) setLoading(false);
   };
 
   useEffect(() => {
@@ -341,8 +341,8 @@ export default function SchedulePage() {
                 selectedSubjectForAssign={selectedSubjectForAssign}
                 onClearSelectedSubject={() => setSelectedSubjectForAssign(null)}
                 onScheduleUpdated={() => {
-                  // Reload palette by triggering state refresh
-                  loadSelectionData();
+                  // Reload palette by triggering state refresh silently
+                  loadSelectionData(true);
                 }}
               />
             </div>

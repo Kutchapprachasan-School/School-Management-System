@@ -1,7 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Calendar } from "lucide-react";
+import { useSession } from "@/lib/auth-client";
+import { getCurriculumRegistry } from "@/app/actions/timetable_registry";
 
 // Import integrated timetable sub-pages
 import TimetableDashboard from "@/app/timetables/dashboard/page";
@@ -25,7 +27,24 @@ interface TimetableViewProps {
 }
 
 export default function TimetableView({ role, lang, subTab, setSubTab }: TimetableViewProps) {
-  const isAdmin = role === "admin" || role === "director";
+  const { data: session } = useSession();
+  const [isSubAdmin, setIsSubAdmin] = useState(false);
+
+  useEffect(() => {
+    async function checkSubAdmin() {
+      if (!session?.user?.id) return;
+      const res = await getCurriculumRegistry();
+      if (res.success && res.data) {
+        const subAdmins = res.data.settings?.subAdmins || [];
+        if (subAdmins.includes(session.user.id)) {
+          setIsSubAdmin(true);
+        }
+      }
+    }
+    checkSubAdmin();
+  }, [session]);
+
+  const isAdmin = role === "admin" || role === "director" || isSubAdmin;
 
   const tabs = [
     { key: "dashboard", label: lang === "th" ? "ภาพรวม" : "Dashboard" },

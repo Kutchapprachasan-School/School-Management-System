@@ -4,8 +4,12 @@ import React, { useState, useEffect } from "react";
 import { 
   Activity, Heart, Search, CheckCircle2, AlertCircle, ShieldAlert,
   ArrowLeft, ArrowRight, User, Home, Sparkles, Plus, Trash2, MapPin, 
-  Camera, Lock, FileText, ChevronRight, HelpCircle, AlertTriangle, Edit3
+  Camera, Lock, FileText, ChevronRight, HelpCircle, AlertTriangle, Edit3,
+  FileDown
 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import { SignatureDialog } from "@/components/SignatureDialog";
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend 
 } from "recharts";
@@ -20,6 +24,7 @@ import {
   getStudentCareStats,
   searchThaiAddress
 } from "@/app/actions/student-care";
+import { sendLineTargetedBroadcast } from "@/app/actions/line-broadcast";
 import { 
   createStudent, 
   updateStudent, 
@@ -43,13 +48,68 @@ const getInputStyle = (value: any, isSelect = false) => {
   }
 };
 
+export function computePmtScore({
+  incomePerCapita,
+  buildingFloor,
+  buildingWall,
+  buildingRoof,
+  livingArrangements,
+  dependents,
+  householdAppliances,
+  vehicles
+}: {
+  incomePerCapita: number;
+  buildingFloor?: string | null;
+  buildingWall?: string | null;
+  buildingRoof?: string | null;
+  livingArrangements?: string | null;
+  dependents?: any;
+  householdAppliances?: any;
+  vehicles?: any;
+}) {
+  let score = 50;
+  if (incomePerCapita <= 1500) score += 30;
+  else if (incomePerCapita <= 3000) score += 15;
+  else if (incomePerCapita <= 5000) score += 5;
+  
+  if (buildingFloor === "ดิน/ทราย" || buildingFloor === "ไม้ไผ่") score += 5;
+  if (buildingWall === "ไม้ไผ่/ท่อนไม้/เศษไม้" || buildingWall === "สังกะสี" || buildingWall === "ดิน/ไวนิลและอื่นๆ") score += 5;
+  if (buildingRoof === "ใบไม้/วัสดุธรรมชาติ" || buildingRoof === "ไวนิล/กระดาษ/แผ่นพลาสติก") score += 5;
+  
+  if (livingArrangements === "อยู่กับผู้อื่น/อยู่ฟรี" || livingArrangements === "บ้านเช่า") score += 10;
+  
+  const deps = dependents ? (typeof dependents === "string" ? JSON.parse(dependents) : dependents) : { disabled: 0, chronicIllness: 0, elderly: 0 };
+  const depCount = (parseInt(deps.disabled) || 0) + (parseInt(deps.chronicIllness) || 0) + (parseInt(deps.elderly) || 0);
+  if (depCount > 0) score += Math.min(15, depCount * 5);
+  
+  const aps = householdAppliances ? (typeof householdAppliances === "string" ? JSON.parse(householdAppliances) : householdAppliances) : {};
+  if (aps.airConditioner) score -= 10;
+  if (aps.washingMachine) score -= 5;
+  if (aps.computer) score -= 5;
+  
+  const vhs = vehicles ? (typeof vehicles === "string" ? JSON.parse(vehicles) : vehicles) : {};
+  if (vhs.car > 0) score -= 10;
+  
+  return Math.max(0, Math.min(100, score));
+}
+
+const maskNationalId = (id: string, showFull = false) => {
+  if (!id) return "-";
+  const cleaned = id.trim().replace(/[-\s]/g, "");
+  if (cleaned.length !== 13) return id;
+  if (showFull) {
+    return `${cleaned[0]}-${cleaned.slice(1, 5)}-${cleaned.slice(5, 10)}-${cleaned.slice(10, 12)}-${cleaned[12]}`;
+  }
+  return `${cleaned[0]}-${cleaned.slice(1, 5)}-XXXXX-XX-${cleaned[12]}`;
+};
+
 interface StudentCareViewProps {
   role: string;
   lang: string;
 }
 
 export default function StudentCareView({ role, lang }: StudentCareViewProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "home-visit" | "sdq">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "home-visit" | "sdq" | "broadcast">("dashboard");
 
   // Central student CRUD states
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -293,6 +353,289 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
   const [sdqAssessor, setSdqAssessor] = useState<"TEACHER" | "PARENT" | "STUDENT">("TEACHER");
   const [sdqAnswers, setSdqAnswers] = useState<Record<number, number>>({});
 
+  // E-Signature Authorization States
+  const [isSigOpen, setIsSigOpen] = useState(false);
+  const [signatureSuccessCallback, setSignatureSuccessCallback] = useState<(() => void) | null>(null);
+
+  // LINE Broadcast States
+  const [broadcastClassrooms, setBroadcastClassrooms] = useState<string[]>([]);
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<any>(null);
+
+  // PMT score calculation simulator
+  const getPmtScore = () => {
+    // 1. Income per capita check
+    const fatherIncome = parseFloat(formData.father.income) || 0;
+    const motherIncome = parseFloat(formData.mother.income) || 0;
+    let guardianIncome = 0;
+    const gRel = formData.guardian.relation;
+    if (gRel !== "บิดา" && gRel !== "มารดา") {
+      guardianIncome = parseFloat(formData.guardian.income) || 0;
+    }
+    
+    let familyInc = 0;
+    if (formData.profile.familyMembers && Array.isArray(formData.profile.familyMembers)) {
+      familyInc = formData.profile.familyMembers.reduce((sum: number, m: any) => {
+        const w = parseFloat(m.wages) || 0;
+        const ag = parseFloat(m.agriculturalIncome) || 0;
+        const b = parseFloat(m.businessIncome) || 0;
+        const wel = parseFloat(m.welfareIncome) || 0;
+        const oth = parseFloat(m.otherIncome) || 0;
+        return sum + w + ag + b + wel + oth;
+      }, 0);
+    }
+    
+    const totalIncome = fatherIncome + motherIncome + guardianIncome + familyInc;
+    
+    // Compute members
+    let memberCount = 1; // Student
+    if (formData.father.name) memberCount++;
+    if (formData.mother.name) memberCount++;
+    if (formData.guardian.name && gRel !== "บิดา" && gRel !== "มารดา") memberCount++;
+    if (formData.profile.familyMembers && Array.isArray(formData.profile.familyMembers)) {
+      memberCount += formData.profile.familyMembers.length;
+    }
+    
+    const perCapita = totalIncome / Math.max(1, memberCount);
+    
+    const finalScore = computePmtScore({
+      incomePerCapita: perCapita,
+      buildingFloor: formData.homeVisit.buildingFloor,
+      buildingWall: formData.homeVisit.buildingWall,
+      buildingRoof: formData.homeVisit.buildingRoof,
+      livingArrangements: formData.homeVisit.livingArrangements,
+      dependents: formData.homeVisit.dependents,
+      householdAppliances: formData.homeVisit.householdAppliances,
+      vehicles: formData.homeVisit.vehicles,
+    });
+    
+    let status = lang === "th" ? "ทั่วไป (Normal)" : "Normal";
+    let statusColor = "text-slate-600 bg-slate-100 dark:bg-slate-800/80";
+    if (finalScore >= 80) {
+      status = lang === "th" ? "ยากจนพิเศษ (Ultra-Poor / Critical)" : "Ultra-Poor (Critical)";
+      statusColor = "text-rose-700 bg-rose-50 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/40";
+    } else if (finalScore >= 50) {
+      status = lang === "th" ? "ยากจน (Poor)" : "Poor";
+      statusColor = "text-amber-700 bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/40";
+    }
+    
+    return { score: finalScore, status, statusColor, perCapita, totalIncome, memberCount };
+  };
+
+  // PDF report exporter for นร.01
+  const exportStudentCarePDF = async (student: any) => {
+    try {
+      showToast(lang === "th" ? "กำลังสร้างเอกสาร PDF..." : "Generating PDF...", lang === "th" ? "โปรดรอสักครู่ ระบบกำลังโหลดฟอนต์ไทย Sarabun" : "Loading Thai unicode font Sarabun...");
+      
+      // Fetch Sarabun font dynamically
+      const fontResponse = await fetch("/Sarabun-Regular.ttf");
+      if (!fontResponse.ok) {
+        throw new Error("Cannot download Sarabun font");
+      }
+      const fontBlob = await fontResponse.blob();
+      
+      const base64Font: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(",")[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(fontBlob);
+      });
+
+      const doc = new jsPDF();
+      
+      // Register Sarabun font
+      doc.addFileToVFS("Sarabun-Regular.ttf", base64Font);
+      doc.addFont("Sarabun-Regular.ttf", "Sarabun", "normal");
+      doc.setFont("Sarabun");
+
+      // Title
+      doc.setFontSize(15);
+      doc.text("แบบบันทึกการเยี่ยมบ้านและรับรองข้อมูลนักเรียนยากจน (นร.01)", 105, 15, { align: "center" });
+      doc.setFontSize(9);
+      doc.text("โครงการสนับสนุนปัจจัยพื้นฐานนักเรียนยากจน / ยากจนพิเศษ (กสศ.)", 105, 20, { align: "center" });
+
+      // Section 1: ข้อมูลนักเรียน
+      doc.setFontSize(11);
+      doc.text("1. ข้อมูลทั่วไปของนักเรียน", 14, 28);
+      doc.setFontSize(9);
+      doc.text(`ชื่อ-นามสกุล: ${student.fullName || "-"}`, 14, 34);
+      doc.text(`เลขประจำตัวนักเรียน: ${student.studentCode || "-"}`, 14, 40);
+      const showFullId = role === "admin" || role === "director";
+      const maskedId = maskNationalId(student.profile?.nationalId || "", showFullId);
+      doc.text(`เลขประจำตัวประชาชน: ${maskedId}`, 110, 40);
+      doc.text(`ระดับชั้น: ${student.classroom || "-"}`, 14, 46);
+      doc.text(`สัญชาติ: ${student.profile?.nationality || "ไทย"}`, 110, 46);
+      doc.text(`ผู้บันทึกข้อมูล: ${student.homeVisit?.recordedBy || "-"}`, 14, 52);
+      doc.text(`วันที่บันทึก: ${student.homeVisit?.lastVisitDate ? new Date(student.homeVisit.lastVisitDate).toLocaleDateString("th-TH") : "-"}`, 110, 52);
+
+      // Section 2: ครอบครัวและรายได้
+      doc.setFontSize(11);
+      doc.text("2. ข้อมูลครอบครัวและรายได้ของสมาชิก", 14, 61);
+      
+      // Family members data table
+      const familyTable: any[] = [];
+      const mList = student.profile?.familyMembers || [];
+      
+      // Father
+      const father = mList.find((m: any) => m.relation === "บิดา");
+      if (father) {
+        familyTable.push(["บิดา", father.name, father.job || "-", father.totalMonthlyIncome ? `${father.totalMonthlyIncome.toLocaleString()} บาท` : "0 บาท", father.health || "ปกติ"]);
+      }
+      // Mother
+      const mother = mList.find((m: any) => m.relation === "มารดา");
+      if (mother) {
+        familyTable.push(["มารดา", mother.name, mother.job || "-", mother.totalMonthlyIncome ? `${mother.totalMonthlyIncome.toLocaleString()} บาท` : "0 บาท", mother.health || "ปกติ"]);
+      }
+      // Guardian
+      const guardian = mList.find((m: any) => m.relation === "ผู้ปกครอง");
+      if (guardian) {
+        familyTable.push(["ผู้ปกครอง", guardian.name, guardian.job || "-", guardian.totalMonthlyIncome ? `${guardian.totalMonthlyIncome.toLocaleString()} บาท` : "0 บาท", guardian.health || "ปกติ"]);
+      }
+      // Others
+      mList.forEach((m: any) => {
+        if (m.relation !== "บิดา" && m.relation !== "มารดา" && m.relation !== "ผู้ปกครอง") {
+          familyTable.push([m.relation, m.name, m.job || "-", m.totalMonthlyIncome ? `${m.totalMonthlyIncome.toLocaleString()} บาท` : "0 บาท", m.health || "ปกติ"]);
+        }
+      });
+
+      if (familyTable.length === 0) {
+        familyTable.push(["-", "ไม่พบข้อมูลสมาชิกครอบครัว", "-", "-", "-"]);
+      }
+
+      (doc as any).autoTable({
+        head: [["ความสัมพันธ์", "ชื่อ-นามสกุล", "อาชีพ", "รายได้/เดือน", "สถานะสุขภาพ"]],
+        body: familyTable,
+        startY: 65,
+        styles: { font: "Sarabun", fontSize: 8.5 },
+        headStyles: { fillColor: [139, 92, 246] }
+      });
+
+      const currentY = (doc as any).lastAutoTable.finalY + 8;
+      
+      doc.setFontSize(9);
+      doc.text(`รายได้ครัวเรือนเฉลี่ยต่อหัว (Income per Capita): ${student.homeVisit?.incomePerCapita ? Math.round(student.homeVisit.incomePerCapita).toLocaleString() : "0"} บาท/คน/เดือน`, 14, currentY);
+      doc.text(`สมาชิกในครัวเรือนทั้งหมด: ${student.homeVisit?.householdMembers || 1} คน | รายได้รวมของครัวเรือน: ${student.homeVisit?.totalHouseholdIncome ? student.homeVisit.totalHouseholdIncome.toLocaleString() : "0"} บาท/เดือน`, 14, currentY + 5);
+
+      // Section 3: สภาพความเป็นอยู่และทรัพย์สิน
+      doc.setFontSize(11);
+      doc.text("3. สภาพความเป็นอยู่ของครัวเรือน", 14, currentY + 15);
+      doc.setFontSize(9);
+      doc.text(`วัสดุพื้นบ้าน: ${student.homeVisit?.buildingFloor || "-"}`, 14, currentY + 21);
+      doc.text(`วัสดุฝาผนัง: ${student.homeVisit?.buildingWall || "-"}`, 14, currentY + 26);
+      doc.text(`วัสดุหลังคา: ${student.homeVisit?.buildingRoof || "-"}`, 14, currentY + 31);
+      doc.text(`สภาพสุขา: ${student.homeVisit?.toiletCondition || "-"}`, 110, currentY + 21);
+      doc.text(`แหล่งน้ำดื่ม: ${student.homeVisit?.drinkingWater || "-"}`, 110, currentY + 26);
+      doc.text(`การใช้ไฟฟ้า: ${student.homeVisit?.electricity || "-"}`, 110, currentY + 31);
+      
+      // Section 4: PMT Score & Assessment
+      doc.setFontSize(11);
+      doc.text("4. การประเมินคะแนนความขัดสน PMT (Conditional Cash Transfer Assessment)", 14, currentY + 41);
+      doc.setFontSize(9);
+      
+      // Re-calculate PMT score using shared helper function
+      const finalPmtScore = computePmtScore({
+        incomePerCapita: student.homeVisit?.incomePerCapita || 0,
+        buildingFloor: student.homeVisit?.buildingFloor,
+        buildingWall: student.homeVisit?.buildingWall,
+        buildingRoof: student.homeVisit?.buildingRoof,
+        livingArrangements: student.homeVisit?.livingArrangements,
+        dependents: student.homeVisit?.dependents,
+        householdAppliances: student.homeVisit?.householdAppliances,
+        vehicles: student.homeVisit?.vehicles,
+      });
+
+      let statusClass = "ทั่วไป (Normal)";
+      if (finalPmtScore >= 80) statusClass = "ยากจนพิเศษ (Ultra-Poor / Critical)";
+      else if (finalPmtScore >= 50) statusClass = "ยากจน (Poor)";
+
+      doc.text(`คะแนนความขัดสน PMT ที่คำนวณได้: ${finalPmtScore} / 100 คะแนน`, 14, currentY + 47);
+      doc.text(`การจัดกลุ่มสถานะยากจน: ${statusClass}`, 110, currentY + 47);
+      
+      // Page 2
+      doc.addPage();
+      
+      doc.setFontSize(11);
+      doc.text("5. รูปภาพและพิกัดแผนที่การเยี่ยมบ้าน", 14, 15);
+      doc.setFontSize(9);
+      doc.text(`พิกัด GPS ที่ระบุ: Latitude: ${student.homeVisit?.latitude || "-"} | Longitude: ${student.homeVisit?.longitude || "-"}`, 14, 21);
+
+      let imageY = 25;
+      if (student.homeVisit?.imgHouseOutside) {
+        try {
+          doc.addImage(student.homeVisit.imgHouseOutside, "JPEG", 14, imageY, 85, 55);
+          doc.text("ภาพถ่ายภายนอกตัวบ้าน", 14, imageY + 59);
+        } catch (e) {
+          doc.rect(14, imageY, 85, 55);
+          doc.text("[ผิดพลาดในการแสดงรูปภาพ]", 30, imageY + 28);
+        }
+      } else {
+        doc.rect(14, imageY, 85, 55);
+        doc.text("ไม่มีภาพถ่ายภายนอกตัวบ้าน", 30, imageY + 28);
+      }
+
+      if (student.homeVisit?.imgHouseInside) {
+        try {
+          doc.addImage(student.homeVisit.imgHouseInside, "JPEG", 110, imageY, 85, 55);
+          doc.text("ภาพถ่ายภายในตัวบ้าน", 110, imageY + 59);
+        } catch (e) {
+          doc.rect(110, imageY, 85, 55);
+          doc.text("[ผิดพลาดในการแสดงรูปภาพ]", 125, imageY + 28);
+        }
+      } else {
+        doc.rect(110, imageY, 85, 55);
+        doc.text("ไม่มีภาพถ่ายภายในตัวบ้าน", 125, imageY + 28);
+      }
+
+      // Section 6: ลายมือชื่ออิเล็กทรอนิกส์ (3-Tier Approvals)
+      const sigY = 100;
+      doc.setFontSize(11);
+      doc.text("6. ลายมือชื่ออิเล็กทรอนิกส์การรับรองข้อมูล (3-Tier Approval)", 14, sigY);
+      
+      doc.setFontSize(9);
+      // Teacher
+      doc.rect(14, sigY + 5, 56, 42);
+      doc.text("ระดับที่ 1: ครูประจำชั้น", 16, sigY + 10);
+      doc.text("ผู้เยี่ยมบ้านและบันทึกข้อมูล", 16, sigY + 15);
+      doc.text(`(ลงชื่อ) ${student.homeVisit?.recordedBy || ""}`, 16, sigY + 27);
+      doc.setFontSize(7.5);
+      const teacherTime = student.homeVisit?.lastVisitDate ? new Date(student.homeVisit.lastVisitDate).toLocaleString("th-TH") : "รอยืนยัน";
+      doc.text(`เมื่อ: ${teacherTime}`, 16, sigY + 38);
+
+      doc.setFontSize(9);
+      // Officer
+      doc.rect(77, sigY + 5, 56, 42);
+      doc.text("ระดับที่ 2: เจ้าหน้าที่ท้องถิ่น", 79, sigY + 10);
+      doc.text("ผู้ตรวจสอบและรับรองข้อมูล", 79, sigY + 15);
+      doc.text(`(ลงชื่อ) ${student.homeVisit?.officerName || "........................"}`, 79, sigY + 25);
+      doc.setFontSize(7.5);
+      doc.text(`ตำแหน่ง: ${student.homeVisit?.officerPosition || "-"}`, 79, sigY + 31);
+      const officerTime = student.homeVisit?.officerCertifiedAt ? new Date(student.homeVisit.officerCertifiedAt).toLocaleString("th-TH") : "รอยืนยัน";
+      doc.text(`เมื่อ: ${officerTime}`, 79, sigY + 38);
+
+      doc.setFontSize(9);
+      // Director
+      doc.rect(140, sigY + 5, 56, 42);
+      doc.text("ระดับที่ 3: ผู้บริหารโรงเรียน", 142, sigY + 10);
+      doc.text("ผู้อนุมัติเอกสารและโครงการ", 142, sigY + 15);
+      doc.text(`(ลงชื่อ) ${student.homeVisit?.directorCertifiedAt ? "ผู้อำนวยการโรงเรียน" : "........................"}`, 142, sigY + 25);
+      doc.setFontSize(7.5);
+      const directorTime = student.homeVisit?.directorCertifiedAt ? new Date(student.homeVisit.directorCertifiedAt).toLocaleString("th-TH") : "รอยืนยัน";
+      doc.text(`เมื่อ: ${directorTime}`, 142, sigY + 38);
+
+      doc.setFontSize(8.5);
+      doc.text("หมายเหตุ: เอกสารนี้ลงนามผ่านระบบความปลอดภัย E-Signature ภายใต้ พ.ร.บ. ว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์", 14, sigY + 55);
+
+      doc.save(`นร.01_${student.fullName || "นักเรียน"}.pdf`);
+      showToast(lang === "th" ? "ส่งออก PDF สำเร็จ" : "PDF Exported Successfully", lang === "th" ? "ดาวน์โหลดไฟล์รายงาน นร.01 เรียบร้อยแล้ว" : "Family visit report PDF downloaded");
+    } catch (err: any) {
+      alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
+    }
+  };
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -317,7 +660,7 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
     setTimeout(() => setSuccessMsg(""), 4500);
   };
 
-  const compressImage = (file: File, maxW: number = 1000, maxH: number = 1000): Promise<string> => {
+  const compressImage = (file: File, maxW: number = 1000, maxH: number = 1000, isProfile: boolean = false): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -346,6 +689,32 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
           const ctx = canvas.getContext("2d");
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
+
+            // Paint GPS & Timestamp Watermark on house photos
+            if (!isProfile) {
+              const lat = formData.homeVisit.latitude;
+              const lng = formData.homeVisit.longitude;
+              const now = new Date();
+              const timeStr = lang === "th" 
+                ? now.toLocaleString("th-TH", { hour12: false }) 
+                : now.toLocaleString("en-US", { hour12: false });
+              
+              const watermarkText = (lat && lng)
+                ? (lang === "th" ? `พิกัด GPS: ${lat}, ${lng} | วันเวลาที่สแกน: ${timeStr}` : `GPS: ${lat}, ${lng} | Scanned: ${timeStr}`)
+                : (lang === "th" ? `วันเวลาที่สแกน: ${timeStr}` : `Scanned: ${timeStr}`);
+
+              const rectHeight = Math.max(36, Math.round(height * 0.06));
+              ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+              ctx.fillRect(0, height - rectHeight, width, rectHeight);
+
+              ctx.fillStyle = "#ffffff";
+              const fontSize = Math.max(12, Math.round(height * 0.025));
+              ctx.font = `bold ${fontSize}px sans-serif`;
+              ctx.textAlign = "left";
+              ctx.textBaseline = "middle";
+              ctx.fillText(watermarkText, 15, height - (rectHeight / 2));
+            }
+
             const compressed = canvas.toDataURL("image/jpeg", 0.75);
             resolve(compressed);
           } else {
@@ -364,7 +733,7 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
 
     try {
       showToast(lang === "th" ? "กำลังประมวลผล..." : "Processing...", lang === "th" ? "ระบบกำลังบีบอัดไฟล์ภาพเพื่อประหยัดพื้นที่จัดเก็บ" : "Compressing image to optimize storage space");
-      const compressedBase64 = await compressImage(file, 1000, 1000);
+      const compressedBase64 = await compressImage(file, 1000, 1000, targetField === "profileImage");
       
       if (targetField === "profileImage") {
         setFormData((prev: any) => ({
@@ -670,52 +1039,47 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
     }
 
     // 4. Validate Phone Numbers (exactly 10 digits if filled, numbers only)
-    if (formData.father.phone) {
-      const fatherPhone = formData.father.phone.trim().replace(/[- ]/g, "");
-      if (fatherPhone && !/^\d{10}$/.test(fatherPhone)) {
-        setError(lang === "th" ? "❌ เบอร์โทรศัพท์ของบิดาต้องเป็นตัวเลข 10 หลัก" : "❌ Father's phone number must be exactly 10 digits");
+    const validatePhone = (phone: string | undefined, relationTh: string, relationEn: string) => {
+      if (!phone) return true;
+      const normalized = phone.trim().replace(/[-\s]/g, "");
+      if (normalized && !/^\d{10}$/.test(normalized)) {
+        setError(lang === "th" ? `❌ เบอร์โทรศัพท์ของ${relationTh}ต้องเป็นตัวเลข 10 หลัก` : `❌ ${relationEn}'s phone number must be exactly 10 digits`);
         window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
+        return false;
       }
-    }
+      return true;
+    };
 
-    if (formData.mother.phone) {
-      const motherPhone = formData.mother.phone.trim().replace(/[- ]/g, "");
-      if (motherPhone && !/^\d{10}$/.test(motherPhone)) {
-        setError(lang === "th" ? "❌ เบอร์โทรศัพท์ของมารดาต้องเป็นตัวเลข 10 หลัก" : "❌ Mother's phone number must be exactly 10 digits");
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
-      }
-    }
-
-    if (formData.guardian.phone) {
-      const guardianPhone = formData.guardian.phone.trim().replace(/[- ]/g, "");
-      if (guardianPhone && !/^\d{10}$/.test(guardianPhone)) {
-        setError(lang === "th" ? "❌ เบอร์โทรศัพท์ของผู้ปกครองต้องเป็นตัวเลข 10 หลัก" : "❌ Guardian's phone number must be exactly 10 digits");
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
-      }
-    }
+    if (!validatePhone(formData.father.phone, "บิดา", "Father")) return;
+    if (!validatePhone(formData.mother.phone, "มารดา", "Mother")) return;
+    if (!validatePhone(formData.guardian.phone, "ผู้ปกครอง", "Guardian")) return;
 
     // Reset error message if validation passes
     setError("");
-    setLoading(true);
-    try {
-      const res = await saveHomeVisitData(editingStudentId, formData);
-      if (res.success) {
-        showToast(lang === "th" ? "💾 บันทึกสำเร็จ" : "💾 Saved Successfully", lang === "th" ? "ข้อมูล นร.01 และบันทึกเยี่ยมบ้านได้รับการอัปเดตแล้ว" : "Student profile and visit logs updated");
-        setEditingStudentId(null);
-        await fetchInitialData();
-      } else {
-        setError(res.error || "Failed to save profile");
+    
+    // Set callback to save data after signature is successfully verified
+    setSignatureSuccessCallback(() => async () => {
+      setLoading(true);
+      try {
+        const res = await saveHomeVisitData(editingStudentId, formData);
+        if (res.success) {
+          showToast(lang === "th" ? "💾 บันทึกสำเร็จ" : "💾 Saved Successfully", lang === "th" ? "ข้อมูล นร.01 และบันทึกเยี่ยมบ้านได้รับการอัปเดตแล้ว" : "Student profile and visit logs updated");
+          setEditingStudentId(null);
+          await fetchInitialData();
+        } else {
+          setError(res.error || "Failed to save profile");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      } catch (err: any) {
+        setError(err.message || "An unexpected error occurred");
         window.scrollTo({ top: 0, behavior: "smooth" });
+      } finally {
+        setLoading(false);
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } finally {
-      setLoading(false);
-    }
+    });
+    
+    // Open E-Signature Dialog
+    setIsSigOpen(true);
   };
 
   // SDQ Questionnaire definition
@@ -1089,7 +1453,7 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
       {/* ============================================================== */}
       {/* 2. DIRECTORIES LIST (HOME VISIT & SDQ DIRECTORIES)             */}
       {/* ============================================================== */}
-      {!editingStudentId && !sdqStudentId && activeTab !== "dashboard" && (
+      {!editingStudentId && !sdqStudentId && activeTab !== "dashboard" && activeTab !== "broadcast" && (
         <div className="space-y-4">
           
           {/* SEARCH & FILTERS CONTROLS */}
@@ -1201,15 +1565,27 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
                             {hasSdq ? (lang === "th" ? "ประเมินแล้ว" : "Assessed") : (lang === "th" ? "ไม่ได้ประเมิน" : "Not Assessed")}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-3 px-4 text-center font-bold">
                           {activeTab === "home-visit" ? (
-                            <button
-                              onClick={() => handleEditStudent(s.id)}
-                              className="py-1 px-3 bg-primary/10 hover:bg-primary text-primary hover:text-white text-[11px] font-bold rounded-xl transition-all cursor-pointer inline-flex items-center gap-1 shadow-sm"
-                            >
-                              <Home className="w-3 h-3" />
-                              <span>{lang === "th" ? "กรอกข้อมูล / ตรวจสอบ" : "Fill Wizard / Review"}</span>
-                            </button>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => handleEditStudent(s.id)}
+                                className="py-1 px-3 bg-primary/10 hover:bg-primary text-primary hover:text-white text-[11px] font-bold rounded-xl transition-all cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                              >
+                                <Home className="w-3 h-3" />
+                                <span>{lang === "th" ? "กรอกข้อมูล / ตรวจสอบ" : "Fill Wizard / Review"}</span>
+                              </button>
+                              {homeVisitCompleted && (
+                                <button
+                                  onClick={() => exportStudentCarePDF(s)}
+                                  className="py-1 px-2.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white text-[11px] font-bold rounded-xl transition-all cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                                  title={lang === "th" ? "ดาวน์โหลดไฟล์รายงาน นร.01 PDF" : "Download นร.01 PDF"}
+                                >
+                                  <FileDown className="w-3 h-3" />
+                                  <span>PDF</span>
+                                </button>
+                              )}
+                            </div>
                           ) : (
                             <button
                               onClick={() => handleOpenSdq(s.id)}
@@ -1281,10 +1657,39 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
               </div>
             </div>
             
-            {/* Step Counter */}
-            <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg border border-primary/20">
-              {lang === "th" ? `ขั้นตอนที่ ${currentStep} / 2` : `Step ${currentStep} of 2`}
-            </span>
+            {/* Step Counter & PDF Export */}
+            <div className="flex items-center gap-2">
+              {formData.homeVisit.visitStatus === "COMPLETED" && (
+                <button
+                  onClick={() => {
+                    const currentStudent = students.find(s => s.id === editingStudentId);
+                    if (currentStudent) {
+                      exportStudentCarePDF({
+                        ...currentStudent,
+                        homeVisit: {
+                          ...formData.homeVisit,
+                          vehicles: typeof formData.homeVisit.vehicles === 'object' ? JSON.stringify(formData.homeVisit.vehicles) : formData.homeVisit.vehicles,
+                          householdAppliances: typeof formData.homeVisit.householdAppliances === 'object' ? JSON.stringify(formData.homeVisit.householdAppliances) : formData.homeVisit.householdAppliances,
+                          dependents: typeof formData.homeVisit.dependents === 'object' ? JSON.stringify(formData.homeVisit.dependents) : formData.homeVisit.dependents,
+                          institutionHelp: typeof formData.homeVisit.institutionHelp === 'object' ? JSON.stringify(formData.homeVisit.institutionHelp) : formData.homeVisit.institutionHelp,
+                        },
+                        profile: {
+                          ...formData.profile,
+                          familyMembers: formData.profile.familyMembers
+                        }
+                      });
+                    }
+                  }}
+                  className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500 border border-emerald-500/20 text-emerald-600 hover:text-white text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  <span>{lang === "th" ? "ดาวน์โหลด PDF" : "Download PDF"}</span>
+                </button>
+              )}
+              <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg border border-primary/20">
+                {lang === "th" ? `ขั้นตอนที่ ${currentStep} / 2` : `Step ${currentStep} of 2`}
+              </span>
+            </div>
           </div>
 
           {/* STEP INDICATOR TABS */}
@@ -3399,6 +3804,272 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
                           </div>
                         </div>
 
+                        {/* 1. PMT Score Simulator Card */}
+                        <div className="col-span-1 md:col-span-2 glass-card p-5 border border-primary/20 dark:border-primary/30 rounded-2xl bg-gradient-to-br from-white/95 to-slate-50/95 dark:from-slate-900/90 dark:to-slate-950/90 shadow-md">
+                          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-5 h-5 text-primary" />
+                              <h5 className="font-extrabold text-xs md:text-sm text-slate-950 dark:text-white">
+                                {lang === "th" ? "ระบบประเมินคะแนนความขัดสน PMT (Conditional Cash Transfer Simulation)" : "Poverty Score PMT Simulator"}
+                              </h5>
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
+                              CCT นร.01
+                            </span>
+                          </div>
+
+                          {(() => {
+                            const pmt = getPmtScore();
+                            return (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Score Panel */}
+                                <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-850">
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">PMT Poverty Score</span>
+                                  <span className="text-3xl font-extrabold text-primary my-1">{pmt.score} <span className="text-xs text-slate-400 font-normal">/ 100</span></span>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${pmt.statusColor}`}>
+                                    {pmt.status}
+                                  </span>
+                                </div>
+
+                                {/* Details Panel */}
+                                <div className="md:col-span-2 space-y-2">
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-slate-950/30">
+                                      <span className="text-[9px] font-bold text-slate-400 block mb-0.5">รายได้รวมของครัวเรือน</span>
+                                      <span className="font-bold text-slate-900 dark:text-slate-100">
+                                        {pmt.totalIncome.toLocaleString()} <span className="text-[9px] text-slate-400 font-normal">บาท/เดือน</span>
+                                      </span>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl bg-slate-50/50 dark:bg-slate-950/30">
+                                      <span className="text-[9px] font-bold text-slate-400 block mb-0.5">สมาชิกในครอบครัวทั้งหมด</span>
+                                      <span className="font-bold text-slate-900 dark:text-slate-100">
+                                        {pmt.memberCount} <span className="text-[9px] text-slate-400 font-normal">คน</span>
+                                      </span>
+                                    </div>
+                                    <div className="col-span-2 p-2.5 rounded-xl bg-slate-50/50 dark:bg-slate-950/30">
+                                      <span className="text-[9px] font-bold text-slate-400 block mb-0.5">รายได้ครัวเรือนเฉลี่ยต่อหัว (Income per Capita)</span>
+                                      <span className="font-bold text-slate-900 dark:text-slate-100">
+                                        {Math.round(pmt.perCapita).toLocaleString()} <span className="text-[9px] text-slate-400 font-normal">บาท/คน/เดือน</span>
+                                      </span>
+                                      {pmt.perCapita <= 3000 ? (
+                                        <span className="ml-2 inline-block text-[9px] font-bold text-rose-500 bg-rose-500/5 px-1.5 py-0.2 rounded border border-rose-500/20">
+                                          {lang === "th" ? "ผ่านเกณฑ์ยากจน (≤ 3,000 บาท)" : "Eligible"}
+                                        </span>
+                                      ) : (
+                                        <span className="ml-2 inline-block text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded">
+                                          {lang === "th" ? "เกินเกณฑ์ (ทั่วไป)" : "Not Eligible"}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* 2. 3-Tier Approval & Certification Panel */}
+                        <div className="col-span-1 md:col-span-2 border-t border-slate-100 dark:border-slate-800 pt-4 space-y-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Lock className="w-4 h-4 text-primary" />
+                            <label className="text-xs font-extrabold text-slate-950 dark:text-white">
+                              {lang === "th" ? "การรับรองข้อมูลและการอนุมัติ 3 ระดับ (3-Tier Document Certification)" : "3-Tier Certification Approvals"}
+                            </label>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {/* Tier 1: Homeroom Teacher */}
+                            <div className="p-4 rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm space-y-2 flex flex-col justify-between">
+                              <div>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-[10px] font-bold text-slate-400">ระดับที่ 1 (Tier 1)</span>
+                                  <span className="text-[9px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 px-1.5 py-0.2 rounded">
+                                    ครูประจำชั้น
+                                  </span>
+                                </div>
+                                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                  {lang === "th" ? "ครูผู้เยี่ยมบ้านและบันทึกข้อมูล" : "Homeroom Visit Record"}
+                                </p>
+                                <div className="text-[10px] text-slate-500 mt-2 space-y-1">
+                                  <p>{lang === "th" ? `ผู้บันทึก: ${formData.homeVisit.recordedBy || "ไม่ระบุ"}` : `Recorded by: ${formData.homeVisit.recordedBy || "-"}`}</p>
+                                  <p>{lang === "th" ? `วันที่เยี่ยม: ${formData.homeVisit.lastVisitDate || "-"}` : `Date: ${formData.homeVisit.lastVisitDate || "-"}`}</p>
+                                </div>
+                              </div>
+
+                              <div className="pt-3 border-t border-slate-100 dark:border-slate-850 mt-2">
+                                {formData.homeVisit.visitStatus === "COMPLETED" ? (
+                                  <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-500">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>{lang === "th" ? "ลงชื่อรับรองสำเร็จ" : "Signed & Certified"}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-amber-500 font-semibold">
+                                    {lang === "th" ? "รอยืนยันเมื่อส่งแบบฟอร์ม" : "Pending final submit"}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Tier 2: Local Certifying Officer */}
+                            <div className="p-4 rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm space-y-2 flex flex-col justify-between font-semibold">
+                              <div>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-[10px] font-bold text-slate-400">ระดับที่ 2 (Tier 2)</span>
+                                  <span className="text-[9px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 px-1.5 py-0.2 rounded">
+                                    เจ้าหน้าที่รับรอง
+                                  </span>
+                                </div>
+                                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                  {lang === "th" ? "เจ้าหน้าที่รับรองข้อมูลท้องถิ่น" : "Local Officer Certification"}
+                                </p>
+
+                                {/* Input fields */}
+                                <div className="space-y-1.5 pt-2">
+                                  <input
+                                    type="text"
+                                    placeholder={lang === "th" ? "ชื่อผู้รับรองในท้องถิ่น..." : "Officer Name..."}
+                                    disabled={isFormLocked}
+                                    value={formData.homeVisit.officerName || ""}
+                                    onChange={(e) => setFormData({
+                                      ...formData,
+                                      homeVisit: { ...formData.homeVisit, officerName: e.target.value }
+                                    })}
+                                    className="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-lg px-2 py-1 text-[10px] font-semibold outline-none"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder={lang === "th" ? "ตำแหน่งผู้รับรอง..." : "Position..."}
+                                    disabled={isFormLocked}
+                                    value={formData.homeVisit.officerPosition || ""}
+                                    onChange={(e) => setFormData({
+                                      ...formData,
+                                      homeVisit: { ...formData.homeVisit, officerPosition: e.target.value }
+                                    })}
+                                    className="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-lg px-2 py-1 text-[10px] font-semibold outline-none"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder={lang === "th" ? "เลขประจำตัวประชาชน 13 หลัก..." : "13-digit ID Card..."}
+                                    disabled={isFormLocked}
+                                    value={formData.homeVisit.officerIdCard || ""}
+                                    onChange={(e) => setFormData({
+                                      ...formData,
+                                      homeVisit: { ...formData.homeVisit, officerIdCard: e.target.value }
+                                    })}
+                                    className="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-lg px-2 py-1 text-[10px] font-semibold outline-none"
+                                  />
+                                  <textarea
+                                    placeholder={lang === "th" ? "ความคิดเห็นหรือคำแนะนำ..." : "Officer Recommendation..."}
+                                    rows={1}
+                                    disabled={isFormLocked}
+                                    value={formData.homeVisit.officerRecommendation || ""}
+                                    onChange={(e) => setFormData({
+                                      ...formData,
+                                      homeVisit: { ...formData.homeVisit, officerRecommendation: e.target.value }
+                                    })}
+                                    className="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-lg px-2 py-1 text-[10px] font-semibold outline-none resize-none"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="pt-3 border-t border-slate-100 dark:border-slate-850 mt-2">
+                                {formData.homeVisit.officerCertifiedAt ? (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-500">
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>{lang === "th" ? "รับรองข้อมูลแล้ว" : "Officer Certified"}</span>
+                                    </div>
+                                    <p className="text-[8px] text-slate-400">
+                                      {new Date(formData.homeVisit.officerCertifiedAt).toLocaleString("th-TH")}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={isFormLocked || !formData.homeVisit.officerName || !formData.homeVisit.officerIdCard}
+                                    onClick={() => {
+                                      if (formData.homeVisit.officerIdCard.length !== 13) {
+                                        alert(lang === "th" ? "เลขประจำตัวประชาชนผู้รับรองต้องมี 13 หลัก" : "ID Card must be 13 digits");
+                                        return;
+                                      }
+                                      setSignatureSuccessCallback(() => () => {
+                                        setFormData((prev: any) => ({
+                                          ...prev,
+                                          homeVisit: {
+                                            ...prev.homeVisit,
+                                            officerCertifiedAt: new Date().toISOString()
+                                          }
+                                        }));
+                                        showToast(lang === "th" ? "✍️ รับรองแล้ว" : "✍️ Certified", lang === "th" ? "บันทึกลายเซ็นเจ้าหน้าที่ท้องถิ่นแล้ว" : "Officer signed successfully");
+                                      });
+                                      setIsSigOpen(true);
+                                    }}
+                                    className="w-full py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                  >
+                                    {lang === "th" ? "✍️ เจ้าหน้าที่ลงชื่อรับรอง" : "✍️ Local Officer Sign"}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Tier 3: School Director */}
+                            <div className="p-4 rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm space-y-2 flex flex-col justify-between">
+                              <div>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-[10px] font-bold text-slate-400">ระดับที่ 3 (Tier 3)</span>
+                                  <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded">
+                                    ผู้อำนวยการ
+                                  </span>
+                                </div>
+                                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                  {lang === "th" ? "ผู้อำนวยการสถานศึกษาอนุมัติ" : "Director Approval"}
+                                </p>
+                                <p className="text-[9px] text-slate-500 mt-2">
+                                  {lang === "th" 
+                                    ? "การลงชื่อขั้นสุดท้ายหลังจากข้อมูลได้รับการรับรองเรียบร้อยแล้ว" 
+                                    : "Final CCT document approval & certification."}
+                                </p>
+                              </div>
+
+                              <div className="pt-3 border-t border-slate-100 dark:border-slate-850 mt-2">
+                                {formData.homeVisit.directorCertifiedAt ? (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-500">
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>{lang === "th" ? "ผู้อำนวยการอนุมัติแล้ว" : "Director Approved"}</span>
+                                    </div>
+                                    <p className="text-[8px] text-slate-400">
+                                      {new Date(formData.homeVisit.directorCertifiedAt).toLocaleString("th-TH")}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={isFormLocked || (role !== "director" && role !== "admin") || !formData.homeVisit.officerCertifiedAt}
+                                    onClick={() => {
+                                      setSignatureSuccessCallback(() => () => {
+                                        setFormData((prev: any) => ({
+                                          ...prev,
+                                          homeVisit: {
+                                            ...prev.homeVisit,
+                                            directorCertifiedAt: new Date().toISOString()
+                                          }
+                                        }));
+                                        showToast(lang === "th" ? "✍️ อนุมัติสำเร็จ" : "✍️ Approved", lang === "th" ? "ผู้อำนวยการสถานศึกษาลงนามเรียบร้อย" : "Director signed successfully");
+                                      });
+                                      setIsSigOpen(true);
+                                    }}
+                                    className="w-full py-1.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                    title={role !== "director" && role !== "admin" ? (lang === "th" ? "เฉพาะ ผอ. หรือ แอดมินเท่านั้น" : "Only for Director/Admin") : ""}
+                                  >
+                                    {lang === "th" ? "✍️ ลงนามอนุมัติ (ผอ.)" : "✍️ Director Approve"}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
                         <div className="col-span-1 md:col-span-2 border-t border-slate-100 dark:border-slate-800 pt-4">
                           <label className="text-[10px] font-bold text-slate-500 block mb-1">สถานะบันทึกทะเบียนเยี่ยมบ้าน นร.01</label>
                           <div className="grid grid-cols-3 gap-2">
@@ -3710,6 +4381,193 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
         </div>
       )}
 
+      {/* ============================================================== */}
+      {/* 4. LINE TARGETED BROADCAST TAB                                */}
+      {/* ============================================================== */}
+      {activeTab === "broadcast" && !editingStudentId && !sdqStudentId && (
+        <div className="space-y-6">
+          <div className="glass-card rounded-2xl border border-border p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] space-y-6">
+            <div>
+              <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                <Sparkles className="w-5 h-5 text-purple-500" />
+                <span>{lang === "th" ? "แจ้งข่าวสารผู้ปกครองรายห้องเรียน (Targeted LINE Broadcast)" : "Targeted LINE Broadcast to Parents"}</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                {lang === "th"
+                  ? "ส่งข้อความประกาศแจ้งเหตุสำคัญ ตารางงาน หรือกิจกรรมพิเศษ ตรงไปยัง LINE ส่วนตัวของผู้ปกครองที่ลงทะเบียนเชื่อมต่อไว้ (จำกัดส่งเฉพาะคาบข่าวสารสำคัญโดยตรง ไม่ส่งอัตโนมัติ)"
+                  : "Send announcements, event notices, or special notices directly to parents' private LINE chats."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left Form controls */}
+              <div className="lg:col-span-2 space-y-5">
+                {broadcastResult && (
+                  <div className={`p-4 rounded-xl border text-xs font-semibold ${
+                    broadcastResult.success
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                      : "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300"
+                  }`}>
+                    {broadcastResult.success ? (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <span>{lang === "th" ? `ส่งข้อความสำเร็จทั้งหมด ${broadcastResult.sentCount} คน (ล้มเหลว ${broadcastResult.failedCount} คน)` : `Successfully sent to ${broadcastResult.sentCount} parents (failed ${broadcastResult.failedCount})`}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-rose-500" />
+                        <span>{broadcastResult.error}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                    {lang === "th" ? "1. เลือกชั้นเรียนเป้าหมาย" : "1. Select Target Classrooms"}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {classrooms.map((cls) => {
+                      const totalStudentsInClass = students.filter(s => s.classroom === cls).length;
+                      const linkedParentsInClass = students.filter(s => s.classroom === cls && s.parentLineUserId).length;
+                      const percentage = totalStudentsInClass > 0 ? Math.round((linkedParentsInClass / totalStudentsInClass) * 100) : 0;
+                      const isSelected = broadcastClassrooms.includes(cls);
+
+                      return (
+                        <button
+                          key={cls}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setBroadcastClassrooms(prev => prev.filter(c => c !== cls));
+                            } else {
+                              setBroadcastClassrooms(prev => [...prev, cls]);
+                            }
+                          }}
+                          className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                            isSelected
+                              ? "bg-purple-500/10 border-purple-500 text-purple-750 dark:text-purple-400 shadow-sm"
+                              : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-650 dark:text-slate-350 hover:border-purple-300"
+                          }`}
+                        >
+                          <div className="text-xs font-bold">{cls}</div>
+                          <div className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold mt-1">
+                            {lang === "th" 
+                              ? `ผูก LINE: ${linkedParentsInClass}/${totalStudentsInClass} (${percentage}%)` 
+                              : `LINE: ${linkedParentsInClass}/${totalStudentsInClass} (${percentage}%)`}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                    {lang === "th" ? "2. ข้อความประกาศที่ต้องการส่ง" : "2. Broadcast Message"}
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={broadcastMessage}
+                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                    placeholder={lang === "th" ? "เช่น เรียนผู้ปกครองห้อง ม.6/1 วันพรุ่งนี้มีกิจกรรมเปิดบ้านนวัตกรรม ขอเรียนเชิญเข้าร่วมงาน..." : "Enter the message details..."}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs outline-none focus:border-purple-500 transition-all font-semibold resize-y"
+                  />
+                  <p className="text-[10px] text-slate-400 italic">
+                    {lang === "th"
+                      ? "* ระบบจะต่อท้ายข้อความด้วยชื่อและตำแหน่งของคุณครูผู้ส่ง และส่งตรงถึงไลน์ส่วนตัวแบบ Multicast เสมือนการทักแชทส่วนตัวแยกคน"
+                      : "* Your name and position will be appended automatically as the sender profile."}
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    disabled={broadcasting || broadcastClassrooms.length === 0 || !broadcastMessage.trim()}
+                    onClick={async () => {
+                      setBroadcasting(true);
+                      setBroadcastResult(null);
+                      try {
+                        const res = await sendLineTargetedBroadcast({
+                          classrooms: broadcastClassrooms,
+                          message: broadcastMessage,
+                        });
+                        setBroadcastResult(res);
+                        if (res.success) {
+                          setBroadcastMessage("");
+                          setBroadcastClassrooms([]);
+                        }
+                      } catch (err: any) {
+                        setBroadcastResult({ success: false, error: err.message || "เกิดข้อผิดพลาด" });
+                      } finally {
+                        setBroadcasting(false);
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-md shadow-purple-500/10"
+                  >
+                    {broadcasting ? (
+                      <div className="flex items-center gap-1.5 justify-center">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>{lang === "th" ? "กำลังส่งประกาศ..." : "Broadcasting..."}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>{lang === "th" ? "ส่งข้อความประกาศ LINE Broadcast" : "Send LINE Broadcast"}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Sidebar - linked status summary */}
+              <div className="space-y-4 bg-slate-50/50 dark:bg-slate-950/10 p-5 rounded-2xl border border-slate-100 dark:border-slate-850">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  {lang === "th" ? "ภาพรวมการเชื่อมต่อผู้ปกครอง" : "Parent Connection Summary"}
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 font-semibold">{lang === "th" ? "นักเรียนทั้งหมด" : "Total Students"}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{students.length} คน</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 font-semibold">{lang === "th" ? "ผูกบัญชี LINE OA แล้ว" : "Linked LINE Accounts"}</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {students.filter(s => s.parentLineUserId).length} คน
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 font-semibold">{lang === "th" ? "คิดเป็นสัดส่วน" : "Linked Ratio"}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {students.length > 0 ? Math.round((students.filter(s => s.parentLineUserId).length / students.length) * 100) : 0}%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200/60 dark:border-slate-800/80 pt-4 space-y-2">
+                  <h5 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    {lang === "th" ? "วิธีการลงทะเบียนสำหรับผู้ปกครอง" : "Parent Registration Guide"}
+                  </h5>
+                  <p className="text-[11px] text-slate-650 dark:text-slate-400 leading-relaxed font-semibold">
+                    {lang === "th"
+                      ? "ให้ผู้ปกครองแอดไลน์ OA ของโรงเรียน จากนั้นในห้องแชท ให้พิมพ์คำสั่งลงทะเบียนตามรูปแบบดังนี้:"
+                      : "Add the school's LINE OA. In the chat room, type the registration command in this format:"}
+                  </p>
+                  <div className="bg-slate-100 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-800 font-mono text-[10px] font-extrabold text-slate-800 dark:text-slate-200 select-all">
+                    ลงทะเบียน [รหัสประจำตัวนักเรียน] [เบอร์โทรผู้ปกครอง]
+                  </div>
+                  <p className="text-[10px] text-slate-450 italic">
+                    {lang === "th"
+                      ? "เช่น: ลงทะเบียน 12345 0812345678"
+                      : "Example: register 12345 0812345678"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isEditStudentOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 relative flex flex-col max-h-[90vh] overflow-y-auto">
@@ -3828,6 +4686,16 @@ export default function StudentCareView({ role, lang }: StudentCareViewProps) {
         </div>
       )}
 
+      <SignatureDialog
+        open={isSigOpen}
+        onOpenChange={setIsSigOpen}
+        onVerifySuccess={() => {
+          if (signatureSuccessCallback) {
+            signatureSuccessCallback();
+          }
+        }}
+        lang={lang as any}
+      />
     </div>
   );
 }

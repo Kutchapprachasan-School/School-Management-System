@@ -21,6 +21,14 @@ async function requireAuth() {
 // 1. Get student care list (with classroom and status)
 export async function getStudentCareList() {
   try {
+    const session = await requireAuth();
+    const role = session.user.role;
+    const position = (session.user as any).position;
+    const isTeacherOrAdmin = role === "ADMIN" || role === "TEACHER" || position === "แอดมิน" || position === "ครู" || position === "ผู้บริหาร" || position === "หัวหน้าหมวด";
+    if (!isTeacherOrAdmin) {
+      throw new Error("ไม่มีสิทธิ์เข้าถึงข้อมูลระเบียบคัดกรองนักเรียน");
+    }
+
     const students = await prisma.student.findMany({
       include: {
         homeVisit: true,
@@ -41,6 +49,14 @@ export async function getStudentCareList() {
 // 2. Get student care detail (home visit, profile, sdq)
 export async function getStudentCareDetail(studentId: string) {
   try {
+    const session = await requireAuth();
+    const role = session.user.role;
+    const position = (session.user as any).position;
+    const isTeacherOrAdmin = role === "ADMIN" || role === "TEACHER" || position === "แอดมิน" || position === "ครู" || position === "ผู้บริหาร" || position === "หัวหน้าหมวด";
+    if (!isTeacherOrAdmin) {
+      throw new Error("ไม่มีสิทธิ์เข้าถึงข้อมูลระเบียบคัดกรองนักเรียน");
+    }
+
     const student = await prisma.student.findUnique({
       where: { id: studentId },
       include: {
@@ -63,6 +79,7 @@ export async function getStudentCareDetail(studentId: string) {
     return { success: false, error: error.message };
   }
 }
+
 
 // 3. Save Home Visit & Profile Data
 export async function saveHomeVisitData(studentId: string, data: any) {
@@ -495,11 +512,32 @@ export async function saveSdqAssessmentData(
 // 5. Get Student Care statistics (classroom progresses, ultra poor ratio, risk distribution)
 export async function getStudentCareStats() {
   try {
+    await requireAuth();
+
+    // Query only necessary scalar fields to prevent high memory usage and timeouts
     const students = await prisma.student.findMany({
-      include: {
-        homeVisit: true,
-        sdqAssessments: true,
-        profile: true
+      select: {
+        id: true,
+        classroom: true,
+        status: true,
+        profile: {
+          select: {
+            congenitalDisease: true,
+            disabilityType: true
+          }
+        },
+        homeVisit: {
+          select: {
+            visitStatus: true,
+            incomePerCapita: true,
+            safety: true
+          }
+        },
+        sdqAssessments: {
+          select: {
+            riskStatus: true
+          }
+        }
       }
     });
 
@@ -602,18 +640,27 @@ export async function getStudentCareStats() {
   }
 }
 
+
+let cachedProvinces: any[] | null = null;
+
 export async function searchThaiAddress(query: string) {
   try {
     if (!query || query.trim().length < 2) {
       return { success: true, data: [] };
     }
     const cleanQuery = query.trim().toLowerCase();
-    const filePath = path.join(process.cwd(), "src/lib/thai-province-data.json");
-    if (!fs.existsSync(filePath)) {
-      return { success: false, error: "Database file not found" };
+    
+    // Load file from disk only once into memory cache
+    if (!cachedProvinces) {
+      const filePath = path.join(process.cwd(), "src/lib/thai-province-data.json");
+      if (!fs.existsSync(filePath)) {
+        return { success: false, error: "Database file not found" };
+      }
+      const fileContent = fs.readFileSync(filePath, "utf-8");
+      cachedProvinces = JSON.parse(fileContent);
     }
-    const fileContent = fs.readFileSync(filePath, "utf-8");
-    const provinces = JSON.parse(fileContent);
+    
+    const provinces = cachedProvinces!;
     const results: Array<{
       subdistrict: string;
       district: string;
@@ -651,3 +698,4 @@ export async function searchThaiAddress(query: string) {
     return { success: false, error: error.message };
   }
 }
+

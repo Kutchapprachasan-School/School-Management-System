@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "./timetable_registry";
 
 
 
@@ -280,6 +281,7 @@ async function checkScheduleConflictsInternal(schedules: any[]) {
 // 3. Resolve conflicts automatically in database using AI Optimizer
 export async function resolveScheduleConflicts() {
   try {
+    await requireAdmin();
     const term = await prisma.academicTerm.findFirst({
       where: { isCurrent: true }
     });
@@ -675,6 +677,7 @@ export async function validateScheduleSlot(payload: SchedulePayload & { excludeS
 
 export async function assignSubjectToSlot(payload: SchedulePayload) {
   try {
+    await requireAdmin();
     const term = payload.termId 
       ? { id: payload.termId } 
       : await prisma.academicTerm.findFirst({ where: { isCurrent: true } });
@@ -711,6 +714,7 @@ export async function assignSubjectToSlot(payload: SchedulePayload) {
 
 export async function removeSubjectFromSlot(scheduleId: string) {
   try {
+    await requireAdmin();
     await prisma.schedule.delete({
       where: { id: scheduleId }
     });
@@ -723,6 +727,7 @@ export async function removeSubjectFromSlot(scheduleId: string) {
 
 export async function removeSubjectByCoordinates(dayOfWeek: number, periodId: string, classroomId: string) {
   try {
+    await requireAdmin();
     const term = await prisma.academicTerm.findFirst({ where: { isCurrent: true } });
     if (!term) return { success: false, error: "ไม่พบปีการศึกษาปัจจุบัน" };
 
@@ -743,6 +748,7 @@ export async function removeSubjectByCoordinates(dayOfWeek: number, periodId: st
 
 export async function moveScheduleSlot(scheduleId: string, dayOfWeek: number, periodId: string) {
   try {
+    await requireAdmin();
     const term = await prisma.academicTerm.findFirst({ where: { isCurrent: true } });
     if (!term) return { success: false, error: "ไม่พบปีการศึกษาปัจจุบัน" };
 
@@ -948,6 +954,7 @@ export async function findChainMovePath(
 
 export async function executeChainMove(chain: Array<{ id: string; dayOfWeek: number; periodId: string }>) {
   try {
+    await requireAdmin();
     const result = await prisma.$transaction(async (tx) => {
       // Move temporarily to dayOfWeek = -1 to bypass DB unique constraints
       for (const move of chain) {

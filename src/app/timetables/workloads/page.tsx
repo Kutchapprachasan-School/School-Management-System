@@ -8,6 +8,7 @@ import {
   Workload,
   CurriculumPlan
 } from "@/app/actions/timetable_registry";
+import Papa from "papaparse";
 import { getSystemInitialData } from "@/app/actions/init";
 import { getRooms } from "@/app/actions/room";
 import { 
@@ -25,7 +26,9 @@ import {
   Lock,
   Unlock,
   Check,
-  X
+  X,
+  Download,
+  Upload
 } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
@@ -78,6 +81,9 @@ export default function WorkloadsPage() {
   const currentUserId = session?.user?.id || "";
 
   const isAdmin = role === "admin" || session?.user?.email === "admin@school.os";
+  const subAdmins = registry.settings?.subAdmins || [];
+  const isSubAdmin = session?.user?.id ? subAdmins.includes(session.user.id) : false;
+  const hasAdminAccess = isAdmin || isSubAdmin;
   const deptHeads = registry.settings?.deptHeads || {};
   
   // Find which department group(s) the current user is a head of
@@ -182,6 +188,81 @@ export default function WorkloadsPage() {
     setUpdatingId(null);
   };
 
+  const handleExportCSV = () => {
+    // Prepare workloads for export
+    const exportData = registry.workloads.map((w) => {
+      const classroom = dbClassrooms.find((c) => c.id === w.classroomId);
+      const sub = dbSubjects.find((s) => s.id === w.subjectId || s.code === w.subjectId);
+      const teacher = dbTeachers.find((t) => t.id === w.userId);
+      return {
+        "รหัสวิชา (SubjectCode)": sub?.code || w.subjectId,
+        "ชื่อชั้นเรียน (ClassroomName)": classroom?.name || w.classroomId,
+        "อีเมลครู (TeacherEmail)": teacher?.email || "",
+        "จำนวนคาบต่อสัปดาห์ (PeriodsPerWeek)": w.hours
+      };
+    });
+
+    const csv = Papa.unparse(exportData);
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: "text/csv;charset=utf-8;" }); // BOM for Excel Thai support
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `workloads_export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const parsedData = results.data as any[];
+        
+        // Map columns
+        const inputs = parsedData.map((row) => {
+          const subjectCode = row["รหัสวิชา (SubjectCode)"] || row["SubjectCode"] || "";
+          const classroomName = row["ชื่อชั้นเรียน (ClassroomName)"] || row["ClassroomName"] || "";
+          const teacherEmail = row["อีเมลครู (TeacherEmail)"] || row["TeacherEmail"] || "";
+          const hoursStr = row["จำนวนคาบต่อสัปดาห์ (PeriodsPerWeek)"] || row["PeriodsPerWeek"] || "1";
+          
+          return {
+            subjectCode: subjectCode.trim(),
+            classroomName: classroomName.trim(),
+            teacherEmail: teacherEmail.trim(),
+            hours: Number(hoursStr) || 1
+          };
+        }).filter(item => item.subjectCode && item.classroomName);
+
+        if (inputs.length === 0) {
+          alert("ไม่พบข้อมูลภาระงานที่ถูกต้องในไฟล์ CSV");
+          return;
+        }
+
+        const confirmImport = confirm(`ต้องการนำเข้าข้อมูลภาระงานสอนจำนวน ${inputs.length} รายการจากไฟล์ CSV ใช่หรือไม่? (ระบบจะแทนที่ภาระงานในห้องเรียนที่มีข้อมูลในไฟล์นี้)`);
+        if (!confirmImport) return;
+
+        setLoading(true);
+        const { bulkImportWorkloads } = await import("@/app/actions/timetable_registry");
+        const res = await bulkImportWorkloads(inputs);
+        if (res.success) {
+          alert(res.message);
+          await loadData();
+        } else {
+          alert(res.error || "เกิดข้อผิดพลาดในการนำเข้า");
+        }
+        setLoading(false);
+      },
+      error: (error) => {
+        alert("เกิดข้อผิดพลาดในการอ่านไฟล์ CSV: " + error.message);
+      }
+    });
+  };
+
   if (loading) {
     return (
       <div className="h-64 flex flex-col items-center justify-center text-slate-400 gap-2">
@@ -228,7 +309,7 @@ export default function WorkloadsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-border/80 pb-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border/80 pb-3 gap-3">
         <div className="flex items-center gap-2.5">
           <Users className="w-6 h-6 text-primary" />
           <div>
@@ -240,6 +321,28 @@ export default function WorkloadsPage() {
             </p>
           </div>
         </div>
+        {/* CSV Import/Export Controls */}
+        {hasAdminAccess && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 font-bold text-[11px] rounded-lg shadow-sm border border-border transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              ส่งออก CSV
+            </button>
+            <label className="px-3 py-1.5 bg-primary hover:bg-primary/95 text-white font-bold text-[11px] rounded-lg shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+              <Upload className="w-3.5 h-3.5" />
+              นำเข้า CSV
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleImportCSV}
+                className="hidden"
+              />
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Progress & Stat Header */}
@@ -374,7 +477,7 @@ export default function WorkloadsPage() {
                     let canAssign = false;
                     let teacherListForDropdown = dbTeachers;
 
-                    if (isAdmin) {
+                    if (hasAdminAccess) {
                       canAssign = true;
                     } else if (isDeptHead && currentUserHeadDepts.includes(subjectGroupOfWl)) {
                       canAssign = true;
@@ -427,7 +530,7 @@ export default function WorkloadsPage() {
                             <div className="flex items-center gap-1.5">
                               {canAssign ? (
                                 // Show select dropdown if admin or dept head
-                                isAdmin || isDeptHead ? (
+                                hasAdminAccess || isDeptHead ? (
                                   <select
                                     value={w.userId}
                                     onChange={(e) => handleAssignTeacher(w.id, e.target.value)}
@@ -473,7 +576,7 @@ export default function WorkloadsPage() {
                           {isUpdating ? (
                             <span className="text-[10px] text-slate-400">...</span>
                           ) : (
-                            isAdmin || (isDeptHead && currentUserHeadDepts.includes(subjectGroupOfWl)) ? (
+                            hasAdminAccess || (isDeptHead && currentUserHeadDepts.includes(subjectGroupOfWl)) ? (
                               <select
                                 value={w.roomId || ""}
                                 onChange={(e) => handleAssignRoom(w.id, e.target.value)}

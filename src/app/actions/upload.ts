@@ -19,6 +19,18 @@ export async function uploadLogo(formData: FormData) {
     throw new Error("No file uploaded");
   }
 
+  // 1. File size check (2MB max)
+  const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+  if (file.size > MAX_SIZE) {
+    throw new Error("ขนาดไฟล์เกินขีดจำกัด 2MB");
+  }
+
+  // 2. MIME type whitelist check
+  const whitelistedMimes = ["image/jpeg", "image/png", "image/webp"];
+  if (!whitelistedMimes.includes(file.type)) {
+    throw new Error("ประเภทไฟล์ไม่ถูกต้อง อนุญาตเฉพาะ JPEG, PNG, และ WebP เท่านั้น");
+  }
+
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 

@@ -17,7 +17,48 @@ import {
   findChainMovePath,
   executeChainMove
 } from "@/app/actions/timetable";
-import { getLunchConfig } from "@/app/actions/timetable_registry";
+import { getLunchConfig, getTeachersRegistry } from "@/app/actions/timetable_registry";
+import { getSystemSettings } from "@/app/actions/settings";
+
+function toSafeAsciiSubject(code: string): string {
+  if (!code) return "";
+  let safe = code;
+  safe = safe.replace(/^ค/, "MA");
+  safe = safe.replace(/^ว/, "SC");
+  safe = safe.replace(/^ท/, "TH");
+  safe = safe.replace(/^อ/, "EN");
+  safe = safe.replace(/^ส/, "SO");
+  safe = safe.replace(/^พ/, "PE");
+  safe = safe.replace(/^ศ/, "AR");
+  safe = safe.replace(/^ง/, "OC");
+  return safe.replace(/[ก-๙]/g, "");
+}
+
+function getSafeTeacherName(teacherId: string, fallbackName: string, teachersList: any[]): string {
+  const teacher = teachersList.find(t => t.id === teacherId);
+  if (teacher && teacher.email) {
+    const prefix = teacher.email.split("@")[0];
+    return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  }
+  let name = fallbackName.replace(/ครู|อ\./g, "").trim();
+  return name.replace(/[ก-๙]/g, "");
+}
+
+function toSafeAsciiRoom(roomName: string): string {
+  if (!roomName) return "Room";
+  let safe = roomName;
+  safe = safe.replace(/ห้องปฏิบัติการ|ห้องแล็บ|ห้องเรียน|ห้อง/g, "Room ");
+  safe = safe.replace(/คอมพิวเตอร์|คอม/g, "Com");
+  safe = safe.replace(/วิทยาศาสตร์|วิทย์/g, "Sci");
+  safe = safe.replace(/เคมี/g, "Chem");
+  safe = safe.replace(/ชีวะ/g, "Bio");
+  safe = safe.replace(/ฟิสิกส์/g, "Phys");
+  safe = safe.replace(/ภาษา|อังกฤษ/g, "Lang");
+  safe = safe.replace(/ดนตรี/g, "Music");
+  safe = safe.replace(/ศิลปะ/g, "Art");
+  safe = safe.replace(/พลศึกษา|พละ/g, "Gym");
+  return safe.replace(/[ก-๙]/g, "").trim();
+}
 
 const DAYS = [
   { id: 1, name: "จันทร์", color: "bg-yellow-400/10 border-yellow-500/20 text-yellow-800 dark:text-yellow-400", label: "Monday" },
@@ -73,6 +114,10 @@ export function ScheduleGrid({
   const [keepExisting, setKeepExisting] = useState(true);
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<any>(null);
+  const [dbTeachers, setDbTeachers] = useState<any[]>([]);
   
   // Toast & Drawer & Highlight States
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -95,16 +140,25 @@ export function ScheduleGrid({
     globalLunch: 5
   });
 
-  const loadData = async () => {
+  const loadData = async (isSilent = false) => {
     if (!viewId) {
       setSchedule({});
+      setInitialLoading(false);
+      setIsUpdating(false);
       setLoading(false);
       return;
     }
-    setLoading(true);
-    const [res, lunchRes] = await Promise.all([
+    if (isSilent) {
+      setIsUpdating(true);
+    } else {
+      setInitialLoading(true);
+      setLoading(true);
+    }
+    const [res, lunchRes, settingsRes, teachersRes] = await Promise.all([
       getTimetableData(viewMode, viewId),
-      getLunchConfig()
+      getLunchConfig(),
+      getSystemSettings(),
+      getTeachersRegistry()
     ]);
     if (res.success && res.data) {
       setSchedule(res.data);
@@ -114,11 +168,19 @@ export function ScheduleGrid({
     if (lunchRes.success && lunchRes.data) {
       setLunchConfig(lunchRes.data);
     }
+    if (settingsRes) {
+      setSystemSettings(settingsRes);
+    }
+    if (teachersRes.success && teachersRes.data) {
+      setDbTeachers(teachersRes.data);
+    }
+    setInitialLoading(false);
+    setIsUpdating(false);
     setLoading(false);
   };
 
   useEffect(() => {
-    loadData();
+    loadData(false);
     setSelectedSourceSlot(null);
   }, [viewMode, viewId]);
 
@@ -173,7 +235,7 @@ export function ScheduleGrid({
       setSuggestions([]);
       return;
     }
-    setLoading(true);
+    setIsUpdating(true);
     const res = await findChainMovePath(sourceScheduleId, day, periodId, chainLimit);
     if (res.success && res.chain && res.chain.length > 0) {
       const chain = res.chain;
@@ -198,33 +260,54 @@ export function ScheduleGrid({
       setToastDetails([res.error || "ชนข้อจำกัดเวลาและไม่พบทางออกแบบลูกโซ่"]);
       setSuggestions([]);
     }
-    setLoading(false);
+    setIsUpdating(false);
   };
 
-  // Export HTML Print
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
+    const schoolName = systemSettings?.schoolName || "โรงเรียนกุฎประสิทธิ์";
+    const logoUrl = systemSettings?.logoUrl || "";
+    
+    let viewHeaderLabel = "";
+    if (viewMode === "classroom") {
+      viewHeaderLabel = `ชั้นเรียน: ${viewId}`;
+    } else if (viewMode === "teacher") {
+      viewHeaderLabel = `ครูผู้สอน: ${viewId}`;
+    } else {
+      viewHeaderLabel = `ห้องปฏิบัติการ: ${viewId}`;
+    }
+
     let htmlContent = `
       <html>
         <head>
-          <title>ตารางสอน - SchoolOS</title>
+          <title>ตารางสอน - ${schoolName}</title>
           <style>
-            body { font-family: 'Sarabun', sans-serif; padding: 20px; text-align: center; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: center; font-size: 13px; }
-            th { background-color: #f4f6f9; font-weight: bold; }
-            .day-header { font-weight: bold; background-color: #fafafa; }
-            .break { background-color: #fef08a; color: #854d0e; font-style: italic; font-weight: bold; }
-            .subject { font-weight: bold; color: #2d3748; }
-            .room { font-size: 11px; color: #718096; margin-top: 4px; }
-            .teacher { font-size: 10px; color: #4a5568; }
+            body { font-family: 'Sarabun', sans-serif; padding: 20px; text-align: center; color: #1e293b; }
+            .header-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+            .logo { max-height: 70px; max-width: 70px; object-fit: contain; }
+            .header-text { text-align: left; }
+            .school-name { font-size: 20px; font-weight: bold; margin: 0; color: #4f46e5; }
+            .subtitle { font-size: 13px; color: #64748b; margin: 3px 0 0 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #cbd5e1; padding: 10px 6px; text-align: center; font-size: 12px; }
+            th { background-color: #f1f5f9; font-weight: bold; }
+            .day-header { font-weight: bold; background-color: #f8fafc; }
+            .break { background-color: #fef3c7; color: #92400e; font-style: italic; font-weight: bold; }
+            .subject { font-weight: bold; color: #1e293b; font-size: 13px; }
+            .room { font-size: 10px; color: #64748b; margin-top: 3px; font-weight: bold; }
+            .teacher { font-size: 10px; color: #475569; margin-top: 1px; }
           </style>
         </head>
         <body>
-          <h2>ตารางเรียน/ตารางสอน (${viewMode === "classroom" ? "ชั้นเรียน" : viewMode === "teacher" ? "ครูผู้สอน" : "ห้องปฏิบัติการ"})</h2>
-          <p>ปีการศึกษา 2569 • ภาคเรียนที่ 1</p>
+          <div class="header-container">
+            ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : ""}
+            <div class="header-text">
+              <h1 class="school-name">${schoolName}</h1>
+              <p class="subtitle">ตารางเรียนตารางสอน • ${viewHeaderLabel} • ปีการศึกษา 2569 ภาคเรียนที่ 1</p>
+            </div>
+          </div>
           <table>
             <thead>
               <tr>
@@ -250,8 +333,8 @@ export function ScheduleGrid({
                     return cellData 
                       ? `<td>
                           <div class="subject">${cellData.subjectCode}</div>
-                          <div class="teacher">อ.${cellData.teacherName}</div>
-                          <div class="room">⊕ ${cellData.room}</div>
+                          <div class="teacher">${cellData.teacherName}</div>
+                          <div class="room">ห้อง: ${cellData.room}</div>
                          </td>`
                       : `<td>-</td>`;
                   }).join("")}
@@ -265,20 +348,47 @@ export function ScheduleGrid({
 
     printWindow.document.write(htmlContent);
     printWindow.document.close();
-    printWindow.print();
+    
+    if (logoUrl) {
+      const img = printWindow.document.querySelector(".logo") as HTMLImageElement;
+      if (img) {
+        img.onload = () => {
+          printWindow.print();
+        };
+      } else {
+        printWindow.print();
+      }
+    } else {
+      printWindow.print();
+    }
   };
 
   // Export PDF via jsPDF
   const handleExportPDF = () => {
     const doc = new jsPDF("l", "mm", "a4");
-    doc.text(`School Timetable Report (${viewMode})`, 14, 15);
-    doc.text("Semester 1/2569", 14, 22);
+    
+    const schoolName = systemSettings?.schoolName || "School OS";
+    const cleanSchoolName = schoolName.replace(/[ก-๙]/g, "").trim() || "School OS Timetable";
+    
+    let viewHeaderLabel = "";
+    if (viewMode === "classroom") {
+      viewHeaderLabel = `Classroom: ${viewId}`;
+    } else if (viewMode === "teacher") {
+      const teacher = dbTeachers.find(t => t.id === viewId || t.name === viewId);
+      const emailPrefix = teacher?.email ? teacher.email.split("@")[0] : viewId;
+      viewHeaderLabel = `Teacher: ${emailPrefix}`;
+    } else {
+      viewHeaderLabel = `Room: ${toSafeAsciiRoom(viewId)}`;
+    }
+
+    doc.text(`${cleanSchoolName} - Timetable Report`, 14, 15);
+    doc.text(`${viewHeaderLabel} | Semester 1/2569`, 14, 22);
 
     const headers = [["Day / Period", ...gridPeriods.map(p => {
       if (p === activeLunchOrder) return "LUNCH";
       const dbOrder = getDbPeriodOrder(p, activeLunchOrder);
       const period = dbPeriods.find(bp => bp.order === dbOrder);
-      return `คาบ ${dbOrder}\n(${period?.startTime || ""} - ${period?.endTime || ""})`;
+      return `Period ${dbOrder}\n(${period?.startTime || ""} - ${period?.endTime || ""})`;
     })]];
 
     const body = DAYS.map(day => {
@@ -288,7 +398,13 @@ export function ScheduleGrid({
           if (p === activeLunchOrder) return "LUNCH";
           const dbOrder = getDbPeriodOrder(p, activeLunchOrder);
           const cell = schedule[`${day.id}-${dbOrder}`];
-          return cell ? `${cell.subjectCode}\n(อ.${cell.teacherName})\n${cell.room}` : "-";
+          if (!cell) return "-";
+          
+          const safeSubject = toSafeAsciiSubject(cell.subjectCode);
+          const safeTeacher = getSafeTeacherName(cell.teacherId, cell.teacherName, dbTeachers);
+          const safeRoom = toSafeAsciiRoom(cell.room);
+          
+          return `${safeSubject}\n(${safeTeacher})\n${safeRoom}`;
         })
       ];
     });
@@ -393,7 +509,7 @@ export function ScheduleGrid({
           return;
         }
 
-        setLoading(true);
+        setIsUpdating(true);
         const res = await assignSubjectToSlot({
           dayOfWeek: dayId,
           userId,
@@ -406,7 +522,7 @@ export function ScheduleGrid({
         if (res.success) {
           setSuccessGlowCell(cellId);
           setTimeout(() => setSuccessGlowCell(null), 1000);
-          await loadData();
+          await loadData(true);
           if (onScheduleUpdated) onScheduleUpdated();
         } else {
           setWigglingCell(cellId);
@@ -414,14 +530,14 @@ export function ScheduleGrid({
           setToastMsg("ไม่สามารถลงตารางเรียนได้");
           setToastDetails([res.error || "ไม่ทราบสาเหตุ"]);
         }
-        setLoading(false);
+        setIsUpdating(false);
       } else if (dragData.type === "move") {
-        setLoading(true);
+        setIsUpdating(true);
         const res = await moveScheduleSlot(dragData.id, dayId, dbPeriod.id);
         if (res.success) {
           setSuccessGlowCell(cellId);
           setTimeout(() => setSuccessGlowCell(null), 1000);
-          await loadData();
+          await loadData(true);
           if (onScheduleUpdated) onScheduleUpdated();
         } else {
           if (chainLimit === 1) {
@@ -433,7 +549,7 @@ export function ScheduleGrid({
                 setToastMsg("สลับคาบเรียนสำเร็จ (1-1 Swap)");
                 setSuccessGlowCell(cellId);
                 setTimeout(() => setSuccessGlowCell(null), 1000);
-                await loadData();
+                await loadData(true);
                 if (onScheduleUpdated) onScheduleUpdated();
               } else {
                 setToastMsg("ไม่สามารถสลับคาบเรียนได้");
@@ -447,7 +563,7 @@ export function ScheduleGrid({
             await handleChainMoveSearch(dragData.id, dayId, dbPeriod.id);
           }
         }
-        setLoading(false);
+        setIsUpdating(false);
       }
     } catch (err: any) {
       console.error(err);
@@ -581,13 +697,23 @@ export function ScheduleGrid({
             </div>
           </div>
 
-          {loading ? (
+        <div className="relative">
+          {isUpdating && (
+            <div className="absolute inset-0 bg-slate-500/10 dark:bg-slate-900/20 backdrop-blur-[1px] rounded-xl flex items-center justify-center z-50 pointer-events-auto cursor-wait">
+              <div className="bg-card border border-border/80 shadow-lg px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span>กำลังบันทึกและคำนวณข้อมูล...</span>
+              </div>
+            </div>
+          )}
+
+          {initialLoading ? (
             <div className="h-64 flex flex-col items-center justify-center text-slate-400 gap-2 border border-dashed border-border rounded-xl">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
               <span className="text-xs font-bold">กำลังโหลดตารางสอนและตรวจสอบจุดขัดแย้ง...</span>
             </div>
           ) : (
-            <div className="min-w-[800px] overflow-x-auto">
+            <div className={cn("min-w-[800px] overflow-x-auto", isUpdating && "pointer-events-none")}>
               <div className="grid grid-cols-[100px_repeat(9,1fr)] gap-2">
                 {/* Header Row */}
                 <div className="h-16 flex items-center justify-center font-bold text-muted-foreground border border-border rounded-xl bg-muted/30">
@@ -679,84 +805,84 @@ export function ScheduleGrid({
                           onClick={async () => {
                             if (!isAdmin) return;
 
-                            // 1. If in Tap-to-Place mode (subject selected from palette)
-                            if (selectedSubjectForAssign) {
-                              if (!cellData) {
-                                setLoading(true);
-                                const res = await assignSubjectToSlot({
-                                  dayOfWeek: day.id,
-                                  userId: selectedSubjectForAssign.userId,
-                                  subjectId: selectedSubjectForAssign.subjectId,
-                                  classroomId: selectedSubjectForAssign.classroomId,
-                                  roomId: selectedSubjectForAssign.roomId || undefined,
-                                  periodId: dbPeriod.id
-                                });
-                                if (res.success) {
-                                  setSuccessGlowCell(`${day.id}-${dbOrder}`);
-                                  setTimeout(() => setSuccessGlowCell(null), 1000);
-                                  await loadData();
-                                  if (onScheduleUpdated) onScheduleUpdated();
-                                  onClearSelectedSubject?.();
-                                } else {
-                                  setWigglingCell(`${day.id}-${dbOrder}`);
-                                  setTimeout(() => setWigglingCell(null), 1200);
-                                  setToastMsg("ไม่สามารถลงตารางเรียนได้");
-                                  setToastDetails([(res as any).error || "ไม่ทราบสาเหตุ"]);
-                                }
-                                setLoading(false);
-                              } else {
-                                // Target cell is occupied, offer to resolve via chain move
-                                if (confirm(`ช่องนี้ไม่ว่าง! ต้องการให้ AI หาทางขยับแบบลูกโซ่เพื่อวางวิชาในคาบนี้แทนหรือไม่?`)) {
-                                  await handleChainMoveSearch(cellData.id, day.id, dbPeriod.id);
-                                }
-                              }
-                              return;
-                            }
-
-                            // 2. If not in Tap-to-Place mode (Manual Swap/Move)
-                            if (cellData) {
-                              if (selectedSourceSlot) {
-                                if (selectedSourceSlot.id === cellData.id) {
-                                  setSelectedSourceSlot(null);
-                                } else {
-                                  setLoading(true);
-                                  const res = await swapScheduleSlots(selectedSourceSlot.scheduleId, cellData.id);
-                                  if (res.success) {
-                                    setToastMsg("สลับคาบเรียนสำเร็จ");
-                                    setSelectedSourceSlot(null);
-                                    await loadData();
-                                    if (onScheduleUpdated) onScheduleUpdated();
-                                  } else {
-                                    alert("สลับคาบล้มเหลว: " + (res as any).error);
-                                  }
-                                  setLoading(false);
-                                }
-                              } else {
-                                setSelectedSourceSlot({
-                                  id: cellData.id,
-                                  scheduleId: cellData.id,
-                                  dayOfWeek: day.id,
-                                  periodId: dbPeriod.id,
-                                  subject: cellData.subject,
-                                  classroomName: cellData.classroomName
-                                });
-                              }
-                            } else {
-                              if (selectedSourceSlot) {
-                                setLoading(true);
-                                const res = await moveScheduleSlot(selectedSourceSlot.scheduleId, day.id, dbPeriod.id);
-                                if (res.success) {
-                                  setSuccessGlowCell(`${day.id}-${dbOrder}`);
-                                  setTimeout(() => setSuccessGlowCell(null), 1000);
-                                  setSelectedSourceSlot(null);
-                                  await loadData();
-                                  if (onScheduleUpdated) onScheduleUpdated();
-                                } else {
-                                  await handleChainMoveSearch(selectedSourceSlot.scheduleId, day.id, dbPeriod.id);
-                                }
-                                setLoading(false);
-                              }
-                            }
+                             // 1. If in Tap-to-Place mode (subject selected from palette)
+                             if (selectedSubjectForAssign) {
+                               if (!cellData) {
+                                 setIsUpdating(true);
+                                 const res = await assignSubjectToSlot({
+                                   dayOfWeek: day.id,
+                                   userId: selectedSubjectForAssign.userId,
+                                   subjectId: selectedSubjectForAssign.subjectId,
+                                   classroomId: selectedSubjectForAssign.classroomId,
+                                   roomId: selectedSubjectForAssign.roomId || undefined,
+                                   periodId: dbPeriod.id
+                                 });
+                                 if (res.success) {
+                                   setSuccessGlowCell(`${day.id}-${dbOrder}`);
+                                   setTimeout(() => setSuccessGlowCell(null), 1000);
+                                   await loadData(true);
+                                   if (onScheduleUpdated) onScheduleUpdated();
+                                   onClearSelectedSubject?.();
+                                 } else {
+                                   setWigglingCell(`${day.id}-${dbOrder}`);
+                                   setTimeout(() => setWigglingCell(null), 1200);
+                                   setToastMsg("ไม่สามารถลงตารางเรียนได้");
+                                   setToastDetails([(res as any).error || "ไม่ทราบสาเหตุ"]);
+                                 }
+                                 setIsUpdating(false);
+                               } else {
+                                 // Target cell is occupied, offer to resolve via chain move
+                                 if (confirm(`ช่องนี้ไม่ว่าง! ต้องการให้ AI หาทางขยับแบบลูกโซ่เพื่อวางวิชาในคาบนี้แทนหรือไม่?`)) {
+                                   await handleChainMoveSearch(cellData.id, day.id, dbPeriod.id);
+                                 }
+                               }
+                               return;
+                             }
+ 
+                             // 2. If not in Tap-to-Place mode (Manual Swap/Move)
+                             if (cellData) {
+                               if (selectedSourceSlot) {
+                                 if (selectedSourceSlot.id === cellData.id) {
+                                   setSelectedSourceSlot(null);
+                                 } else {
+                                   setIsUpdating(true);
+                                   const res = await swapScheduleSlots(selectedSourceSlot.scheduleId, cellData.id);
+                                   if (res.success) {
+                                     setToastMsg("สลับคาบเรียนสำเร็จ");
+                                     setSelectedSourceSlot(null);
+                                     await loadData(true);
+                                     if (onScheduleUpdated) onScheduleUpdated();
+                                   } else {
+                                     alert("สลับคาบล้มเหลว: " + (res as any).error);
+                                   }
+                                   setIsUpdating(false);
+                                 }
+                               } else {
+                                 setSelectedSourceSlot({
+                                   id: cellData.id,
+                                   scheduleId: cellData.id,
+                                   dayOfWeek: day.id,
+                                   periodId: dbPeriod.id,
+                                   subject: cellData.subject,
+                                   classroomName: cellData.classroomName
+                                 });
+                               }
+                             } else {
+                               if (selectedSourceSlot) {
+                                 setIsUpdating(true);
+                                 const res = await moveScheduleSlot(selectedSourceSlot.scheduleId, day.id, dbPeriod.id);
+                                 if (res.success) {
+                                   setSuccessGlowCell(`${day.id}-${dbOrder}`);
+                                   setTimeout(() => setSuccessGlowCell(null), 1000);
+                                   setSelectedSourceSlot(null);
+                                   await loadData(true);
+                                   if (onScheduleUpdated) onScheduleUpdated();
+                                 } else {
+                                   await handleChainMoveSearch(selectedSourceSlot.scheduleId, day.id, dbPeriod.id);
+                                 }
+                                 setIsUpdating(false);
+                               }
+                             }
                           }}
                           className={cn(
                             "h-24 border rounded-lg relative transition-all duration-250 select-none flex flex-col items-center justify-center overflow-hidden",
@@ -780,15 +906,15 @@ export function ScheduleGrid({
                                   onClick={async (e) => {
                                     e.stopPropagation();
                                     if (confirm("ลบคาบเรียนนี้ใช่หรือไม่?")) {
-                                      setLoading(true);
+                                      setIsUpdating(true);
                                       const res = await removeSubjectFromSlot(cellData.id);
                                       if (res.success) {
-                                        await loadData();
+                                        await loadData(true);
                                         if (onScheduleUpdated) onScheduleUpdated();
                                       } else {
                                         alert(res.error || "ลบล้มเหลว");
                                       }
-                                      setLoading(false);
+                                      setIsUpdating(false);
                                     }
                                   }}
                                   className="absolute top-1 right-1 p-0.5 rounded-full bg-rose-500 text-white hover:bg-rose-600 transition-all opacity-0 group-hover:opacity-100 cursor-pointer shadow z-20"
@@ -846,6 +972,7 @@ export function ScheduleGrid({
             </div>
           )}
         </div>
+      </div>
 
       {/* 4. AI Optimal Swapping & Chain Move Panel - Floating bottom-right overlay */}
       {suggestions.length > 0 && (
@@ -897,7 +1024,7 @@ export function ScheduleGrid({
                       alert("การสลับคาบล้มเหลว: " + (res as any).error);
                     }
                   }
-                  setLoading(false);
+                  setIsUpdating(false);
                 }}
                 className="p-3 border border-border/80 rounded-xl bg-muted/20 hover:bg-amber-400/5 hover:border-amber-400/60 cursor-pointer transition-all duration-200 group text-xs text-foreground/90 font-semibold"
               >

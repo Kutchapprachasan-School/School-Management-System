@@ -207,7 +207,7 @@
   backdrop-filter: blur(16px) saturate(120%);
   -webkit-backdrop-filter: blur(16px) saturate(120%);
   border: 1px solid rgba(255, 255, 255, 1);
-  border-radius: 0.625rem !important;
+  border-radius: 1rem !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02), inset 0 2px 4px rgba(255, 255, 255, 0.4) !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -222,7 +222,7 @@
   backdrop-filter: blur(16px) saturate(130%);
   -webkit-backdrop-filter: blur(16px) saturate(130%);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 0.625rem !important;
+  border-radius: 1rem !important;
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.3),
     0 20px 48px rgba(0, 0, 0, 0.2) !important;

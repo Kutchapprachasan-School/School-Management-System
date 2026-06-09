@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { FileSpreadsheet, FileText, Sparkles, AlertCircle, Save, Check } from "lucide-react";
+import { FileSpreadsheet, FileText, Sparkles, AlertCircle, Save, Upload } from "lucide-react";
 import { Student } from "@/types/school-os";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
+import { saveStudentGrades } from "@/app/actions/academic";
 
 interface AssessmentGradingProps {
   students: Student[];
@@ -21,6 +22,8 @@ interface StudentGrade {
   fin: number;     // Final Exam (Max 20)
   reading: number; // Analytical Reading (0-3)
   traits: number;  // Desirable Characteristics (0-3)
+  grade?: string;  // Calculated or locked grade (0-4, มส, ร, ผ, มผ)
+  attendanceRate: number; // Simulated/actual attendance percentage (0-100)
 }
 
 export default function AssessmentGrading({
@@ -31,13 +34,19 @@ export default function AssessmentGrading({
   const [studentGrades, setStudentGrades] = useState<Record<string, StudentGrade>>({});
   const [sgsSyncProgress, setSgsSyncProgress] = useState<number | null>(null);
   const [selectedClassroom, setSelectedClassroom] = useState("ม.6/1");
+  const [isAcademicMode, setIsAcademicMode] = useState<boolean>(true); // true = 0-4, false = ผ/มผ
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Initialize grade state with default mock values for students
+  // Initialize grade state with default mock values for students and simulated attendance rates
   useEffect(() => {
     const initialGrades: Record<string, StudentGrade> = {};
-    students.forEach((s) => {
-      // Seeding mock grades to look like a real gradebook
+    students.forEach((s, idx) => {
       const seed = s.fullName.charCodeAt(0) % 5;
+      
+      // Simulate attendance rate: one student below 80% to showcase มส flag
+      let attRate = 95 - (seed * 3);
+      if (idx === 3) attRate = 72; // Student index 3 is under 80%
+
       initialGrades[s.id] = {
         f1: 15 + (seed % 6),
         f2: 14 + (seed % 7),
@@ -45,7 +54,8 @@ export default function AssessmentGrading({
         f3: 15 + (seed % 6),
         fin: 11 + (seed % 10),
         reading: Math.min(3, 2 + (seed % 2)),
-        traits: Math.min(3, 2 + (seed % 2))
+        traits: Math.min(3, 2 + (seed % 2)),
+        attendanceRate: attRate
       };
     });
     setStudentGrades(initialGrades);
@@ -59,20 +69,35 @@ export default function AssessmentGrading({
   // Classrooms list derived from students
   const classrooms = Array.from(new Set(students.map((s) => s.classroom))).sort();
 
-  const handleFieldChange = (studentId: string, field: keyof StudentGrade, val: number) => {
-    let max = 20;
-    if (field === "reading" || field === "traits") max = 3;
-    
-    // Clamp values
-    const clamped = Math.max(0, Math.min(max, val));
-
-    setStudentGrades((prev) => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId] || { f1: 0, f2: 0, mid: 0, f3: 0, fin: 0, reading: 3, traits: 3 },
-        [field]: clamped
+  const handleFieldChange = (studentId: string, field: keyof StudentGrade, val: number | string) => {
+    setStudentGrades((prev) => {
+      const current = prev[studentId] || { f1: 0, f2: 0, mid: 0, f3: 0, fin: 0, reading: 3, traits: 3, attendanceRate: 100 };
+      
+      if (field === "grade") {
+        return {
+          ...prev,
+          [studentId]: {
+            ...current,
+            grade: String(val)
+          }
+        };
       }
-    }));
+
+      let max = 20;
+      if (field === "reading" || field === "traits") max = 3;
+      if (field === "attendanceRate") max = 100;
+      
+      // Clamp numeric values
+      const clamped = Math.max(0, Math.min(max, Number(val)));
+
+      return {
+        ...prev,
+        [studentId]: {
+          ...current,
+          [field]: clamped
+        }
+      };
+    });
   };
 
   const calculateTotal = (grades: StudentGrade) => {
@@ -80,7 +105,23 @@ export default function AssessmentGrading({
     return grades.f1 + grades.f2 + grades.mid + grades.f3 + grades.fin;
   };
 
-  const calculateGrade = (total: number) => {
+  const calculateGrade = (grades: StudentGrade) => {
+    if (!grades) return "0";
+    
+    // Check 80% attendance rule
+    if (grades.attendanceRate < 80) {
+      return "มส"; // Locked due to low attendance
+    }
+
+    if (grades.grade && ["ร", "มส"].includes(grades.grade)) {
+      return grades.grade;
+    }
+
+    if (!isAcademicMode) {
+      return grades.grade === "มผ" ? "มผ" : "ผ";
+    }
+
+    const total = calculateTotal(grades);
     if (total >= 80) return "4.0";
     if (total >= 75) return "3.5";
     if (total >= 70) return "3.0";
@@ -100,20 +141,21 @@ export default function AssessmentGrading({
 
   const exportGradesXLSX = () => {
     const data = filteredStudents.map((s, idx) => {
-      const grades = studentGrades[s.id] || { f1: 0, f2: 0, mid: 0, f3: 0, fin: 0, reading: 0, traits: 0 };
+      const grades = studentGrades[s.id] || { f1: 0, f2: 0, mid: 0, f3: 0, fin: 0, reading: 0, traits: 0, attendanceRate: 100 };
       const total = calculateTotal(grades);
-      const grade = calculateGrade(total);
+      const grade = calculateGrade(grades);
       
       return {
         "เลขที่": s.seatNumber || (idx + 1),
         "รหัสประจำตัว": s.studentCode,
         "ชื่อ-นามสกุล": s.fullName,
-        "คะแนนเก็บ 1 (20)": grades.f1,
-        "คะแนนเก็บ 2 (20)": grades.f2,
-        "คะแนนกลางภาค (20)": grades.mid,
-        "คะแนนเก็บ 3 (20)": grades.f3,
-        "คะแนนปลายภาค (20)": grades.fin,
-        "รวมคะแนน (100)": total,
+        "อัตราเข้าเรียน (%)": grades.attendanceRate,
+        "คะแนนเก็บ 1 (20)": isAcademicMode ? grades.f1 : "-",
+        "คะแนนเก็บ 2 (20)": isAcademicMode ? grades.f2 : "-",
+        "คะแนนกลางภาค (20)": isAcademicMode ? grades.mid : "-",
+        "คะแนนเก็บ 3 (20)": isAcademicMode ? grades.f3 : "-",
+        "คะแนนปลายภาค (20)": isAcademicMode ? grades.fin : "-",
+        "รวมคะแนน (100)": isAcademicMode ? total : "-",
         "ผลการเรียน (เกรด)": grade,
         "อ่านคิดวิเคราะห์": getReadingLabel(grades.reading),
         "คุณลักษณะ": getReadingLabel(grades.traits)
@@ -128,25 +170,69 @@ export default function AssessmentGrading({
     addAuditLog("EXPORT_ปพ5_EXCEL", `ส่งออกไฟล์ ปพ.5 ชั้น ${selectedClassroom} รูปแบบ Excel`);
   };
 
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsName = wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        const data = XLSX.utils.sheet_to_json<any>(ws);
+
+        const updatedGrades = { ...studentGrades };
+        data.forEach((row: any) => {
+          const studentCode = row["รหัสประจำตัว"];
+          const student = students.find((s) => s.studentCode === studentCode);
+          if (student) {
+            updatedGrades[student.id] = {
+              f1: Number(row["คะแนนเก็บ 1 (20)"] ?? 0),
+              f2: Number(row["คะแนนเก็บ 2 (20)"] ?? 0),
+              mid: Number(row["คะแนนกลางภาค (20)"] ?? 0),
+              f3: Number(row["คะแนนเก็บ 3 (20)"] ?? 0),
+              fin: Number(row["คะแนนปลายภาค (20)"] ?? 0),
+              reading: row["อ่านคิดวิเคราะห์"] === "ดีเยี่ยม" ? 3 : row["อ่านคิดวิเคราะห์"] === "ดี" ? 2 : row["อ่านคิดวิเคราะห์"] === "ผ่าน" ? 1 : 0,
+              traits: row["คุณลักษณะ"] === "ดีเยี่ยม" ? 3 : row["คุณลักษณะ"] === "ดี" ? 2 : row["คุณลักษณะ"] === "ผ่าน" ? 1 : 0,
+              attendanceRate: Number(row["อัตราเข้าเรียน (%)"] ?? 100),
+              grade: row["ผลการเรียน (เกรด)"]
+            };
+          }
+        });
+
+        setStudentGrades(updatedGrades);
+        triggerToast("📥 นำเข้าไฟล์ Excel สำเร็จ", "ระบบได้ปรับปรุงสถานะคะแนนและเกรดผู้เรียนแล้ว");
+        addAuditLog("IMPORT_ปพ5_EXCEL", `นำเข้าไฟล์คะแนน ปพ.5 ชั้น ${selectedClassroom} สำเร็จ`);
+      } catch (err) {
+        triggerToast("❌ รูปแบบไฟล์ไม่ถูกต้อง", "ไม่สามารถนำเข้าข้อมูลจากเทมเพลต Excel นี้ได้");
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = ""; // clear input
+  };
+
   const exportGradesPDF = () => {
     const doc = new jsPDF();
     doc.text(`Student Gradebook (ปพ.5) - Class ${selectedClassroom}`, 14, 15);
     
     const tableData = filteredStudents.map((s, idx) => {
-      const grades = studentGrades[s.id] || { f1: 0, f2: 0, mid: 0, f3: 0, fin: 0, reading: 0, traits: 0 };
+      const grades = studentGrades[s.id] || { f1: 0, f2: 0, mid: 0, f3: 0, fin: 0, reading: 0, traits: 0, attendanceRate: 100 };
       const total = calculateTotal(grades);
-      const grade = calculateGrade(total);
+      const grade = calculateGrade(grades);
       
       return [
         s.seatNumber || (idx + 1),
         s.studentCode,
         s.fullName,
-        grades.f1.toString(),
-        grades.f2.toString(),
-        grades.mid.toString(),
-        grades.f3.toString(),
-        grades.fin.toString(),
-        total.toString(),
+        grades.attendanceRate + "%",
+        isAcademicMode ? grades.f1.toString() : "-",
+        isAcademicMode ? grades.f2.toString() : "-",
+        isAcademicMode ? grades.mid.toString() : "-",
+        isAcademicMode ? grades.f3.toString() : "-",
+        isAcademicMode ? grades.fin.toString() : "-",
+        isAcademicMode ? total.toString() : "-",
         grade,
         grades.reading.toString(),
         grades.traits.toString()
@@ -154,7 +240,7 @@ export default function AssessmentGrading({
     });
 
     (doc as any).autoTable({
-      head: [["No.", "ID", "Name", "F1", "F2", "Mid", "F3", "Final", "Total", "Grade", "Read", "Trait"]],
+      head: [["No.", "ID", "Name", "Att.", "F1", "F2", "Mid", "F3", "Final", "Total", "Grade", "Read", "Trait"]],
       body: tableData,
       startY: 20,
       theme: 'grid',
@@ -184,16 +270,44 @@ export default function AssessmentGrading({
     }, 400);
   };
 
-  const handleSaveGrades = () => {
-    triggerToast("💾 บันทึกคะแนนสำเร็จ", "จัดเก็บคะแนนดิบและผลการประเมินลงฐานข้อมูลกลางของระบบเรียบร้อย");
-    addAuditLog("UPDATE_STUDENT_GRADES", `บันทึกคะแนน ปพ.5 ชั้น ${selectedClassroom}`);
+  const handleSaveGrades = async () => {
+    setIsSaving(true);
+    try {
+      // Collect structured grades records
+      const gradesToSave: Record<string, any> = {};
+      Object.entries(studentGrades).forEach(([studentId, g]) => {
+        gradesToSave[studentId] = {
+          f1: g.f1,
+          f2: g.f2,
+          mid: g.mid,
+          f3: g.f3,
+          fin: g.fin,
+          reading: g.reading,
+          traits: g.traits,
+          grade: calculateGrade(g)
+        };
+      });
+
+      // Term mock id is cu-default-term
+      const res = await saveStudentGrades("sub-default-id", "term-default-id", gradesToSave);
+      if (res.success) {
+        triggerToast("💾 บันทึกคะแนนสำเร็จ", "จัดเก็บคะแนนดิบและผลการประเมินลงฐานข้อมูลกลางของระบบเรียบร้อย");
+        addAuditLog("UPDATE_STUDENT_GRADES", `บันทึกคะแนน ปพ.5 ชั้น ${selectedClassroom}`);
+      } else {
+        triggerToast("❌ เกิดข้อผิดพลาด", res.error || "ไม่สามารถจัดเก็บข้อมูลคะแนนได้");
+      }
+    } catch (error: any) {
+      triggerToast("❌ เกิดข้อผิดพลาด", error.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="p-6 rounded-2xl glass-card bg-white/50 dark:bg-slate-900/50 border border-white/60 dark:border-slate-800/80 space-y-6 animate-in fade-in duration-200">
       
       {/* Header controls */}
-      <div className="flex flex-col xl:flex-row justify-between xl:items-center gap-4 bg-slate-50/50 dark:bg-slate-955/20 p-4 rounded-xl border border-slate-100 dark:border-slate-850">
+      <div className="flex flex-col xl:flex-row justify-between xl:items-center gap-4 bg-slate-50/50 dark:bg-slate-950/20 p-4 rounded-xl border border-slate-100 dark:border-slate-850">
         <div>
           <h3 className="text-sm font-bold text-slate-850 dark:text-white flex items-center gap-1.5">
             สมุดบันทึกคะแนนแบบแยกตัวชี้วัด (ปพ.5 Grade Book)
@@ -202,6 +316,26 @@ export default function AssessmentGrading({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Grade type toggle */}
+          <div className="flex bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[10px] font-bold">
+            <button
+              onClick={() => setIsAcademicMode(true)}
+              className={`px-3 py-1 rounded-md transition-all ${
+                isAcademicMode ? "bg-primary text-white shadow-sm" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+              }`}
+            >
+              ตัดเกรด (0 - 4)
+            </button>
+            <button
+              onClick={() => setIsAcademicMode(false)}
+              className={`px-3 py-1 rounded-md transition-all ${
+                !isAcademicMode ? "bg-primary text-white shadow-sm" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+              }`}
+            >
+              ประเมิน (ผ / มผ)
+            </button>
+          </div>
+
           {/* Class selector */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-550">เลือกห้องเรียน:</span>
@@ -217,12 +351,24 @@ export default function AssessmentGrading({
             </select>
           </div>
 
+          <label className="h-9 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl flex items-center gap-1 transition-all cursor-pointer">
+            <Upload className="w-3.5 h-3.5" />
+            นำเข้า Excel
+            <input 
+              type="file" 
+              accept=".xlsx, .xls" 
+              onChange={handleImportExcel} 
+              className="hidden" 
+            />
+          </label>
+
           <button
             onClick={handleSaveGrades}
+            disabled={isSaving}
             className="h-9 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/60 dark:text-indigo-400 font-bold text-xs rounded-xl flex items-center gap-1 transition-all"
           >
             <Save className="w-3.5 h-3.5" />
-            บันทึก
+            {isSaving ? "กำลังบันทึก..." : "บันทึก"}
           </button>
 
           <button
@@ -230,7 +376,7 @@ export default function AssessmentGrading({
             className="h-9 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-1 transition-all"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
-            Excel (XLSX)
+            ส่งออก Excel
           </button>
 
           <button
@@ -243,7 +389,7 @@ export default function AssessmentGrading({
 
           <button
             onClick={syncScoresToSgs}
-            className="h-9 px-4.5 bg-primary text-white font-bold text-xs rounded-xl shadow-md shadow-primary/10 hover:bg-indigo-700 transition-all flex items-center gap-1"
+            className="h-9 px-4.5 bg-primary text-white font-bold text-xs rounded-xl shadow-md shadow-primary/10 hover:bg-indigo-750 transition-all flex items-center gap-1"
           >
             <Sparkles className="w-3.5 h-3.5" />
             ซิงค์ SGS
@@ -275,12 +421,19 @@ export default function AssessmentGrading({
               <th className="px-3 py-3 w-12 text-center">เลขที่</th>
               <th className="px-3 py-3 w-28">รหัสประจำตัว</th>
               <th className="px-4 py-3 min-w-[150px]">ชื่อ-นามสกุล</th>
-              <th className="px-2 py-3 w-20 text-center bg-indigo-50/20 dark:bg-indigo-950/5">F1 (20)</th>
-              <th className="px-2 py-3 w-20 text-center bg-indigo-50/20 dark:bg-indigo-950/5">F2 (20)</th>
-              <th className="px-2 py-3 w-20 text-center bg-amber-50/20 dark:bg-amber-950/5">กลางภาค (20)</th>
-              <th className="px-2 py-3 w-20 text-center bg-indigo-50/20 dark:bg-indigo-950/5">F3 (20)</th>
-              <th className="px-2 py-3 w-20 text-center bg-purple-50/20 dark:bg-purple-950/5">ปลายภาค (20)</th>
-              <th className="px-2 py-3 w-20 text-center bg-slate-100/50 dark:bg-slate-850/50">รวม (100)</th>
+              <th className="px-3 py-3 w-20 text-center">เวลาเรียน</th>
+              {isAcademicMode ? (
+                <>
+                  <th className="px-2 py-3 w-20 text-center bg-indigo-50/20 dark:bg-indigo-950/5">F1 (20)</th>
+                  <th className="px-2 py-3 w-20 text-center bg-indigo-50/20 dark:bg-indigo-950/5">F2 (20)</th>
+                  <th className="px-2 py-3 w-20 text-center bg-amber-50/20 dark:bg-amber-950/5">กลางภาค (20)</th>
+                  <th className="px-2 py-3 w-20 text-center bg-indigo-50/20 dark:bg-indigo-950/5">F3 (20)</th>
+                  <th className="px-2 py-3 w-20 text-center bg-purple-50/20 dark:bg-purple-950/5">ปลายภาค (20)</th>
+                  <th className="px-2 py-3 w-20 text-center bg-slate-100/50 dark:bg-slate-850/50">รวม (100)</th>
+                </>
+              ) : (
+                <th className="px-3 py-3 text-center bg-slate-50/10 dark:bg-slate-900/5">สถานะการประเมิน</th>
+              )}
               <th className="px-3 py-3 w-20 text-center">ผลเรียน</th>
               <th className="px-3 py-3 w-28 text-center">ประเมินการอ่าน</th>
               <th className="px-3 py-3 w-28 text-center">คุณลักษณะ</th>
@@ -288,9 +441,10 @@ export default function AssessmentGrading({
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-850 bg-white dark:bg-card">
             {filteredStudents.map((student, idx) => {
-              const grades = studentGrades[student.id] || { f1: 0, f2: 0, mid: 0, f3: 0, fin: 0, reading: 3, traits: 3 };
+              const grades = studentGrades[student.id] || { f1: 0, f2: 0, mid: 0, f3: 0, fin: 0, reading: 3, traits: 3, attendanceRate: 100 };
               const total = calculateTotal(grades);
-              const grade = calculateGrade(total);
+              const grade = calculateGrade(grades);
+              const isLowAttendance = grades.attendanceRate < 80;
 
               return (
                 <tr key={student.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/20 transition-all">
@@ -304,66 +458,98 @@ export default function AssessmentGrading({
                     {student.fullName}
                   </td>
 
-                  {/* F1 */}
-                  <td className="px-2 py-2 w-20 text-center bg-indigo-50/10 dark:bg-indigo-950/2">
-                    <input
-                      type="number"
-                      value={grades.f1}
-                      onChange={(e) => handleFieldChange(student.id, "f1", Number(e.target.value))}
-                      className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-slate-800 dark:text-slate-200 focus:border-primary outline-none"
-                    />
+                  {/* Attendance check */}
+                  <td className="px-3 py-2 text-center">
+                    <span className={`font-mono font-bold ${isLowAttendance ? "text-rose-500" : "text-slate-600 dark:text-slate-350"}`}>
+                      {grades.attendanceRate}%
+                    </span>
                   </td>
 
-                  {/* F2 */}
-                  <td className="px-2 py-2 w-20 text-center bg-indigo-50/10 dark:bg-indigo-950/2">
-                    <input
-                      type="number"
-                      value={grades.f2}
-                      onChange={(e) => handleFieldChange(student.id, "f2", Number(e.target.value))}
-                      className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-slate-800 dark:text-slate-200 focus:border-primary outline-none"
-                    />
-                  </td>
+                  {isAcademicMode ? (
+                    <>
+                      {/* F1 */}
+                      <td className="px-2 py-2 w-20 text-center bg-indigo-50/10 dark:bg-indigo-950/2">
+                        <input
+                          type="number"
+                          disabled={isLowAttendance}
+                          value={grades.f1}
+                          onChange={(e) => handleFieldChange(student.id, "f1", Number(e.target.value))}
+                          className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-slate-800 dark:text-slate-200 focus:border-primary outline-none disabled:opacity-50"
+                        />
+                      </td>
 
-                  {/* Midterm */}
-                  <td className="px-2 py-2 w-20 text-center bg-amber-50/10 dark:bg-amber-950/2">
-                    <input
-                      type="number"
-                      value={grades.mid}
-                      onChange={(e) => handleFieldChange(student.id, "mid", Number(e.target.value))}
-                      className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-amber-700 dark:text-amber-400 focus:border-amber-500 outline-none"
-                    />
-                  </td>
+                      {/* F2 */}
+                      <td className="px-2 py-2 w-20 text-center bg-indigo-50/10 dark:bg-indigo-950/2">
+                        <input
+                          type="number"
+                          disabled={isLowAttendance}
+                          value={grades.f2}
+                          onChange={(e) => handleFieldChange(student.id, "f2", Number(e.target.value))}
+                          className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-slate-800 dark:text-slate-200 focus:border-primary outline-none disabled:opacity-50"
+                        />
+                      </td>
 
-                  {/* F3 */}
-                  <td className="px-2 py-2 w-20 text-center bg-indigo-50/10 dark:bg-indigo-950/2">
-                    <input
-                      type="number"
-                      value={grades.f3}
-                      onChange={(e) => handleFieldChange(student.id, "f3", Number(e.target.value))}
-                      className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-slate-800 dark:text-slate-200 focus:border-primary outline-none"
-                    />
-                  </td>
+                      {/* Midterm */}
+                      <td className="px-2 py-2 w-20 text-center bg-amber-50/10 dark:bg-amber-950/2">
+                        <input
+                          type="number"
+                          disabled={isLowAttendance}
+                          value={grades.mid}
+                          onChange={(e) => handleFieldChange(student.id, "mid", Number(e.target.value))}
+                          className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-amber-700 dark:text-amber-400 focus:border-amber-500 outline-none disabled:opacity-50"
+                        />
+                      </td>
 
-                  {/* Final */}
-                  <td className="px-2 py-2 w-20 text-center bg-purple-50/10 dark:bg-purple-950/2">
-                    <input
-                      type="number"
-                      value={grades.fin}
-                      onChange={(e) => handleFieldChange(student.id, "fin", Number(e.target.value))}
-                      className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-purple-700 dark:text-purple-400 focus:border-purple-500 outline-none"
-                    />
-                  </td>
+                      {/* F3 */}
+                      <td className="px-2 py-2 w-20 text-center bg-indigo-50/10 dark:bg-indigo-950/2">
+                        <input
+                          type="number"
+                          disabled={isLowAttendance}
+                          value={grades.f3}
+                          onChange={(e) => handleFieldChange(student.id, "f3", Number(e.target.value))}
+                          className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-slate-800 dark:text-slate-200 focus:border-primary outline-none disabled:opacity-50"
+                        />
+                      </td>
 
-                  {/* Total */}
-                  <td className="px-2 py-2 w-20 text-center bg-slate-100/30 dark:bg-slate-850/30 font-mono font-bold text-slate-800 dark:text-slate-100">
-                    {total}
-                  </td>
+                      {/* Final */}
+                      <td className="px-2 py-2 w-20 text-center bg-purple-50/10 dark:bg-purple-950/2">
+                        <input
+                          type="number"
+                          disabled={isLowAttendance}
+                          value={grades.fin}
+                          onChange={(e) => handleFieldChange(student.id, "fin", Number(e.target.value))}
+                          className="w-14 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-center px-1 font-bold text-purple-700 dark:text-purple-400 focus:border-purple-500 outline-none disabled:opacity-50"
+                        />
+                      </td>
+
+                      {/* Total */}
+                      <td className="px-2 py-2 w-20 text-center bg-slate-100/30 dark:bg-slate-850/30 font-mono font-bold text-slate-800 dark:text-slate-100">
+                        {isLowAttendance ? "-" : total}
+                      </td>
+                    </>
+                  ) : (
+                    /* ACTIVITY GRADE SELECTOR */
+                    <td className="px-3 py-2 text-center bg-slate-50/10 dark:bg-slate-900/2">
+                      <select
+                        disabled={isLowAttendance}
+                        value={grades.grade || "ผ"}
+                        onChange={(e) => handleFieldChange(student.id, "grade", e.target.value)}
+                        className="w-24 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs text-center px-1 font-bold text-slate-700 dark:text-slate-300 focus:outline-none disabled:opacity-50"
+                      >
+                        <option value="ผ">ผ่าน (ผ)</option>
+                        <option value="มผ">ไม่ผ่าน (มผ)</option>
+                        <option value="ร">รอการประเมิน (ร)</option>
+                      </select>
+                    </td>
+                  )}
 
                   {/* Grade label */}
                   <td className="px-3 py-2 w-20 text-center">
                     <span className={`inline-block w-12 text-center text-[10px] font-bold py-0.5 rounded border ${
-                      grade === "4.0" 
+                      grade === "4.0" || grade === "ผ"
                         ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" 
+                        : grade === "มส" 
+                        ? "bg-rose-600/15 text-rose-600 border-rose-500/30"
                         : parseFloat(grade) >= 2.0 
                         ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/20" 
                         : "bg-rose-500/10 text-rose-600 border-rose-500/20"

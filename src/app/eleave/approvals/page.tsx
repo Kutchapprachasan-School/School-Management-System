@@ -5,6 +5,7 @@ import { getPendingApprovals, approveLeaveRequest, rejectLeaveRequest } from "@/
 import { format } from "date-fns";
 import { UserCircle, Calendar, FileText, Check, X, AlertCircle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { SignatureDialog } from "@/components/SignatureDialog";
 
 function calculateDays(startDateStr: string, endDateStr: string, type: string): number {
   const start = new Date(startDateStr);
@@ -28,7 +29,10 @@ function calculateDays(startDateStr: string, endDateStr: string, type: string): 
 export default function ApprovalsPage() {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+
+  const [isSigOpen, setIsSigOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
 
   const loadData = () => {
     setLoading(true);
@@ -45,10 +49,17 @@ export default function ApprovalsPage() {
     return map[type] || type;
   };
 
-  const handleApprove = async (id: string) => {
-    await approveLeaveRequest(id);
+  const handleApproveClick = (id: string) => {
+    setSelectedRequestId(id);
+    setIsSigOpen(true);
+  };
+
+  const handleSignatureSuccess = async () => {
+    if (!selectedRequestId) return;
+    await approveLeaveRequest(selectedRequestId);
     window.dispatchEvent(new Event("noti-refresh"));
     loadData();
+    setSelectedRequestId(null);
   };
 
   const handleReject = async (id: string) => {
@@ -159,7 +170,7 @@ export default function ApprovalsPage() {
                   {t("reject")}
                 </button>
                 <button
-                  onClick={() => handleApprove(item.id)}
+                  onClick={() => handleApproveClick(item.id)}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all"
                 >
                   <Check className="w-4 h-4" />
@@ -170,6 +181,13 @@ export default function ApprovalsPage() {
           ))
         )}
       </div>
+
+      <SignatureDialog
+        open={isSigOpen}
+        onOpenChange={setIsSigOpen}
+        onVerifySuccess={handleSignatureSuccess}
+        lang={lang}
+      />
     </div>
   );
 }

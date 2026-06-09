@@ -56,6 +56,10 @@ model User {
 
   subjectAssignments TeacherSubjectAssignment[]
   teacherConstraint  TeacherConstraint?
+
+  dutySchedules    DutySchedule[]
+  coopShare        CoopShare?
+  portfolios       TeacherPortfolio[]
 }
 
 model Session {
@@ -198,6 +202,7 @@ model Student {
   status      String   @default("ปกติ") // ปกติ, เสี่ยง, ช่วยเหลือเร่งด่วน
   parentName  String?
   parentPhone String?
+  parentLineUserId String? // LINE user ID of the linked parent/guardian
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -216,6 +221,13 @@ model Student {
 
   // New compliance field
   idCardType String @default("CITIZEN_ID") // CITIZEN_ID, G_CODE
+
+  coopShare              CoopShare?
+  scholarshipApplications ScholarshipApplication[]
+  mentalAssessments      MentalHealthAssessment[]
+  counselingSessions     CounselingSession[]
+  wasteDeposits          WasteDeposit[]
+  busRoster              BusRoster?
 }
 
 model HealthVisit {
@@ -301,12 +313,13 @@ model AcademicTerm {
 }
 
 model Subject {
-  id     String  @id @default(cuid())
-  code   String  @unique // รหัสวิชา e.g. "ว31101"
-  name   String // ชื่อวิชา e.g. "วิทยาศาสตร์"
-  credit Float? // หน่วยกิต e.g. 1.5
-  hours  Int? // จำนวนคาบต่อสัปดาห์
-  color  String? // สีประจำวิชาสำหรับแสดงบน UI
+  id         String  @id @default(cuid())
+  code       String  @unique // รหัสวิชา e.g. "ว31101"
+  name       String // ชื่อวิชา e.g. "วิทยาศาสตร์"
+  credit     Float? // หน่วยกิต e.g. 1.5
+  hours      Int? // จำนวนคาบต่อสัปดาห์
+  color      String? // สีประจำวิชาสำหรับแสดงบน UI
+  isAcademic Boolean @default(true) // เป็นวิชาการ (0-4) หรือกิจกรรม (ผ/มผ)
 
   schedules     Schedule[]
   subjectScores SubjectScore[]
@@ -777,3 +790,231 @@ model AcademicEvent {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
+
+model BudgetProject {
+  id        String   @id @default(cuid())
+  code      String   @unique // รหัสโครงการ
+  name      String // ชื่อโครงการ
+  budget    Float    @default(0.0) // งบประมาณอนุมัติ
+  spent     Float    @default(0.0) // งบประมาณใช้ไป
+  remaining Float    @default(0.0) // งบประมาณคงเหลือ
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ===================================================
+// 1. Daily Duty Guard & Duty Teacher System
+// ===================================================
+model DutySchedule {
+  id        String   @id @default(cuid())
+  teacherId String
+  dayOfWeek String   // MONDAY, TUESDAY, etc.
+  spotName  String   // e.g. Gate 1, Canteen, Parking
+  timeSlot  String   // e.g. Morning (07:00-08:00), Afternoon (16:00-17:00)
+  teacher   User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  logs      DutyLog[]
+}
+
+model DutyLog {
+  id             String        @id @default(cuid())
+  dutyScheduleId String
+  date           DateTime
+  status         String        // COMPLETED, ABSENT, SUBSTITUTE
+  reportedBy     String
+  photoUrl       String?
+  incidents      String?       // Any unusual events logged
+  createdAt      DateTime      @default(now())
+  schedule       DutySchedule @relation(fields: [dutyScheduleId], references: [id], onDelete: Cascade)
+}
+
+// ===================================================
+// 2. Digital Cooperative POS & Shareholder System
+// ===================================================
+model CoopShare {
+  id          String   @id @default(cuid())
+  userId      String?  @unique // if teacher
+  studentId   String?  @unique // if student
+  sharesCount Int      @default(0)
+  totalValue  Float    @default(0.0)
+  updatedAt   DateTime @updatedAt
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  student     Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model CoopTransaction {
+  id         String   @id @default(cuid())
+  buyerId    String   // Student Code or User ID
+  buyerType  String   // STUDENT or TEACHER
+  totalPrice Float
+  paymentBy  String   // CASH, COOP_CREDIT
+  itemsJson  String   // Array of bought items, quantities, prices
+  createdAt  DateTime @default(now())
+}
+
+// ===================================================
+// 3. Student Council E-Election System
+// ===================================================
+model Election {
+  id             String      @id @default(cuid())
+  title          String
+  status         String      // DRAFT, ACTIVE, CLOSED
+  startDate      DateTime
+  endDate        DateTime
+  candidates     Candidate[]
+  voterLogJson   String      @default("[]") // Hashed list of student codes who voted (anonymized)
+}
+
+model Candidate {
+  id          String   @id @default(cuid())
+  electionId  String
+  partyNumber Int
+  partyName   String
+  leaderName  String
+  slogan      String?
+  logoUrl     String?
+  votesCount  Int      @default(0)
+  election    Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+}
+
+// ===================================================
+// 4. Inventory & Asset Auditing System
+// ===================================================
+model SchoolAsset {
+  id           String           @id @default(cuid())
+  assetCode    String           @unique
+  name         String
+  category     String           // e.g. Electronics, Furniture
+  purchaseDate DateTime
+  cost         Float
+  location     String
+  status       String           // NORMAL, DAMAGED, LOST
+  auditLogs    AssetAuditLog[]
+}
+
+model AssetAuditLog {
+  id           String      @id @default(cuid())
+  assetId      String
+  auditDate    DateTime
+  auditorName  String
+  condition    String      // GOOD, REPAIR_NEEDED, SCRAPPED
+  notes        String?
+  photoUrl     String?
+  asset        SchoolAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
+
+// ===================================================
+// 5. Counseling, Scholarships & Alumni System
+// ===================================================
+model Scholarship {
+  id           String                   @id @default(cuid())
+  name         String
+  sponsor      String
+  amount       Float
+  details      String
+  status       String                   // OPEN, CLOSED
+  applications ScholarshipApplication[]
+}
+
+model ScholarshipApplication {
+  id            String      @id @default(cuid())
+  scholarshipId String
+  studentId     String
+  status        String      // PENDING, APPROVED, REJECTED
+  remarks       String?
+  scholarship   Scholarship @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model AlumniRecord {
+  id             String   @id @default(cuid())
+  studentCode    String   @unique
+  fullName       String
+  graduationYear Int
+  tcasStatus     String?  // university further study info
+  workplace      String?  // employment info
+  phone          String?
+  email          String?
+}
+
+// ===================================================
+// 6. Student Risk Screening & Mental Health System
+// ===================================================
+model MentalHealthAssessment {
+  id          String   @id @default(cuid())
+  studentId   String
+  type        String   // 9Q, 8Q, STRESS
+  score       Int
+  result      String   // NORMAL, MILD, DEPRESSION_RISK
+  createdAt   DateTime @default(now())
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model CounselingSession {
+  id             String    @id @default(cuid())
+  studentId      String
+  counselorId    String
+  date           DateTime
+  topics         String    // e.g. Family, Academics, Stress
+  notesSecured   String    // AES encrypted or securely restricted
+  referralNeeded Boolean   @default(false)
+  student        Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+// ===================================================
+// 7. SAR Portfolio & QA System
+// ===================================================
+model TeacherPortfolio {
+  id          String   @id @default(cuid())
+  teacherId   String
+  academicYear Int
+  activityName String
+  qaStandard  String   // e.g. Standard 1.2
+  category    String   // e.g. Professional Development, Innovation
+  evidenceUrl String?
+  createdAt   DateTime @default(now())
+  teacher     User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+}
+
+// ===================================================
+// 8. School Waste Bank System
+// ===================================================
+model WasteDeposit {
+  id          String   @id @default(cuid())
+  studentId   String
+  wasteType   String   // PLASTIC, PAPER, GLASS, METAL
+  weightKg    Float
+  pointsValue Int
+  createdAt   DateTime @default(now())
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+// ===================================================
+// 9. School Bus Safety & Tracking System
+// ===================================================
+model BusRoute {
+  id         String         @id @default(cuid())
+  busNumber  String         @unique
+  driverName String
+  driverPhone String
+  roster     BusRoster[]
+  attendance BusAttendance[]
+}
+
+model BusRoster {
+  id        String   @id @default(cuid())
+  routeId   String
+  studentId String   @unique
+  route     BusRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model BusAttendance {
+  id          String   @id @default(cuid())
+  routeId     String
+  studentId   String
+  timestamp   DateTime @default(now())
+  direction   String   // INBOUND, OUTBOUND
+  coordinates String?  // GPS latitude, longitude
+  route       BusRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+}
+

@@ -47,13 +47,29 @@ export async function getSystemSettings() {
     });
   }
 
-  // Don't send developerSecret to the client
-  const { developerSecret, ...safeSettings } = settings;
+  // Mask sensitive credentials before returning to client context
+  const { developerSecret, lineChannelAccessToken, lineTargetGroupId, ...rest } = settings;
+  const safeSettings = {
+    ...rest,
+    lineChannelAccessToken: lineChannelAccessToken ? "••••••••••••••••" : "",
+    lineTargetGroupId: lineTargetGroupId ? "••••••••••••••••" : "",
+  };
   return safeSettings;
 }
 
 export async function updateSystemSettings(data: { schoolName: string; subheader: string; logoUrl?: string; lineChannelAccessToken?: string; lineTargetGroupId?: string; leaveRules?: string; lineGroupCode?: string; lineGroupInviteUrl?: string }) {
   await requireAdmin();
+
+  // If input contains mask placeholder, do not overwrite the original DB value
+  const currentSettings = await prisma.systemSettings.findUnique({ where: { id: "default" } });
+
+  const finalLineToken = data.lineChannelAccessToken !== undefined
+    ? (data.lineChannelAccessToken.includes("••••") ? currentSettings?.lineChannelAccessToken : data.lineChannelAccessToken)
+    : undefined;
+
+  const finalLineGroupId = data.lineTargetGroupId !== undefined
+    ? (data.lineTargetGroupId.includes("••••") ? currentSettings?.lineTargetGroupId : data.lineTargetGroupId)
+    : undefined;
 
   await prisma.systemSettings.upsert({
     where: { id: "default" },
@@ -61,8 +77,8 @@ export async function updateSystemSettings(data: { schoolName: string; subheader
       schoolName: data.schoolName,
       subheader: data.subheader,
       logoUrl: data.logoUrl !== undefined ? (data.logoUrl === "" ? null : data.logoUrl) : undefined,
-      lineChannelAccessToken: data.lineChannelAccessToken !== undefined ? data.lineChannelAccessToken : undefined,
-      lineTargetGroupId: data.lineTargetGroupId !== undefined ? data.lineTargetGroupId : undefined,
+      lineChannelAccessToken: finalLineToken ?? undefined,
+      lineTargetGroupId: finalLineGroupId ?? undefined,
       leaveRules: data.leaveRules !== undefined ? data.leaveRules : undefined
     },
     create: {
@@ -70,8 +86,8 @@ export async function updateSystemSettings(data: { schoolName: string; subheader
       schoolName: data.schoolName,
       subheader: data.subheader,
       logoUrl: data.logoUrl === "" ? null : data.logoUrl,
-      lineChannelAccessToken: data.lineChannelAccessToken,
-      lineTargetGroupId: data.lineTargetGroupId,
+      lineChannelAccessToken: finalLineToken ?? "",
+      lineTargetGroupId: finalLineGroupId ?? "",
       leaveRules: data.leaveRules || "การลากิจต้องยื่นคำขอล่วงหน้าอย่างน้อย 3 วันทำการ\nการลาป่วยติดต่อกันเกิน 3 วัน ต้องแนบใบรับรองแพทย์\nระบบจะส่งแจ้งเตือนให้หัวหน้างานบุคคลของท่านพิจารณาเป็นลำดับแรก",
       footerText: "© 2006 Panchapon Getrat KP-school",
       developerSecret: "admin1234"

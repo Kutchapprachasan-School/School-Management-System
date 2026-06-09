@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "@/lib/auth-client";
-import { updateProfile } from "@/app/actions/user";
+import { updateProfile, setupSignaturePin, registerBiometrics } from "@/app/actions/user";
 import { authClient } from "@/lib/auth-client";
 import { Save, Lock, User as UserIcon, ShieldCheck, Mail, BookOpen, KeyRound, CheckCircle, Fingerprint, Camera, Trash2, Pencil, RefreshCw, Paperclip } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -27,6 +27,16 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
+  const [pinCode, setPinCode] = useState("");
+  const [confirmPinCode, setConfirmPinCode] = useState("");
+  const [savingPin, setSavingPin] = useState(false);
+  const [pinError, setPinError] = useState("");
+  const [pinSuccess, setPinSuccess] = useState("");
+
+  const [registeringBiometrics, setRegisteringBiometrics] = useState(false);
+  const [bioSuccess, setBioSuccess] = useState("");
+  const [signatureMethod, setSignatureMethod] = useState<"upload" | "draw">("upload");
+
   const [isDrawing, setIsDrawing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -42,15 +52,23 @@ export default function ProfilePage() {
     }
   }, [user]);
 
+  let isWebauthnEnabled = false;
+  if (user?.preferences) {
+    try {
+      const prefs = JSON.parse(user.preferences);
+      isWebauthnEnabled = !!prefs.webauthnEnabled;
+    } catch {}
+  }
+
   if (isPending) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="animate-pulse space-y-4">
           <div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl w-1/4"></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-3xl"></div>
+            <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
             <div className="md:col-span-2 space-y-6">
-              <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-3xl"></div>
+              <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
             </div>
           </div>
         </div>
@@ -189,7 +207,7 @@ export default function ProfilePage() {
     try {
       await updateProfile({ name, subjectGroup, signatureUrl: signaturePreview });
       await refetch();
-      alert(lang === "en" ? "Signature saved successfully!" : "บันทึกลายเซ็นต์สำเร็จเรียบร้อยแล้ว");
+      alert(lang === "en" ? "Signature saved successfully!" : "บันทึกลายเซ็นสำเร็จเรียบร้อยแล้ว");
     } catch (err) {
       alert(lang === "en" ? "Failed to save signature" : "เกิดข้อผิดพลาดในการบันทึกลายเซ็น");
     } finally {
@@ -198,13 +216,13 @@ export default function ProfilePage() {
   };
 
   const handleDeleteSignature = async () => {
-    if (!confirm(lang === "en" ? "Are you sure you want to delete your signature?" : "คุณแน่ใจหรือไม่ว่าต้องการลบลายเซ็นต์นี้?")) return;
+    if (!confirm(lang === "en" ? "Are you sure you want to delete your signature?" : "คุณแน่ใจหรือไม่ว่าต้องการลบลายเซ็นนี้?")) return;
     setSavingSignature(true);
     try {
       await updateProfile({ name, subjectGroup, signatureUrl: "" });
       await refetch();
       setSignaturePreview("");
-      alert(lang === "en" ? "Signature deleted successfully!" : "ลบลายเซ็นต์เรียบร้อยแล้ว");
+      alert(lang === "en" ? "Signature deleted successfully!" : "ลบลายเซ็นเรียบร้อยแล้ว");
     } catch (err) {
       alert(lang === "en" ? "Failed to delete signature" : "เกิดข้อผิดพลาดในการลบลายเซ็น");
     } finally {
@@ -273,14 +291,14 @@ export default function ProfilePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Profile Card */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/60 dark:border-slate-800 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+        <div className="glass-card rounded-2xl border border-border overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
           {/* Cover Header */}
           <div className="h-32 bg-gradient-to-br from-purple-500 to-indigo-600 relative">
             <div className="absolute inset-0 bg-black/10 mix-blend-overlay" />
             <div className="absolute bottom-0 right-4 translate-y-1/2 flex items-center justify-center p-1 rounded-full bg-white dark:bg-slate-900 shadow-md">
               <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-950 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                Active
+                {lang === "en" ? "Active" : "ออนไลน์"}
               </span>
             </div>
           </div>
@@ -298,7 +316,7 @@ export default function ProfilePage() {
               )}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 text-[10px] font-bold">
                 <Camera className="w-5 h-5 text-white" />
-                <span>เปลี่ยนรูป</span>
+                <span>{lang === "en" ? "Change Image" : "เปลี่ยนรูป"}</span>
               </div>
             </div>
             <input
@@ -338,10 +356,10 @@ export default function ProfilePage() {
             <div className="mt-4 w-full flex items-center justify-between px-3 text-[11px] font-bold text-slate-400 dark:text-slate-500">
               <span className="flex items-center gap-1">
                 <Fingerprint className="w-3.5 h-3.5 text-slate-400" />
-                UID: {user?.id ? user.id.substring(0, 8).toUpperCase() : "N/A"}
+                {lang === "en" ? "UID: " : "ไอดี: "}{user?.id ? user.id.substring(0, 8).toUpperCase() : "N/A"}
               </span>
               <span>
-                Joined: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString(lang === "th" ? "th-TH" : "en-US", { month: "short", year: "numeric" }) : "N/A"}
+                {lang === "en" ? "Joined: " : "เข้าร่วมเมื่อ: "}{user?.createdAt ? new Date(user.createdAt).toLocaleDateString(lang === "th" ? "th-TH" : "en-US", { month: "short", year: "numeric" }) : "N/A"}
               </span>
             </div>
           </div>
@@ -351,7 +369,7 @@ export default function ProfilePage() {
         <div className="lg:col-span-2 space-y-8">
 
           {/* Profile Info Form */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/60 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          <div className="glass-card rounded-2xl border border-border p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white pb-4 border-b border-slate-100 dark:border-slate-800/80">
               <UserIcon className="w-5 h-5 text-indigo-500" />
               {lang === "en" ? "Personal Information" : "ข้อมูลส่วนตัว"}
@@ -421,17 +439,17 @@ export default function ProfilePage() {
           </div>
 
           {/* Signature Upload & Drawing Card */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/60 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] space-y-6">
-            <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white pb-4 border-b border-slate-100 dark:border-slate-800/80">
+          <div className="glass-card rounded-2xl border border-border p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] space-y-6">
+            <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white pb-4 border-b border-slate-100 dark:border-slate-850/80">
               <Fingerprint className="w-5 h-5 text-indigo-500" />
-              {lang === "en" ? "Leave Form Signature" : "ลายมือชื่อสำหรับใบลา (ลายเซ็นต์อิเล็กทรอนิกส์)"}
+              {lang === "en" ? "Leave Form Signature" : "ลายมือชื่อสำหรับใบลา (ลายเซ็นอิเล็กทรอนิกส์)"}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Preview Container */}
               <div className="space-y-3">
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  {lang === "en" ? "Current Signature" : "ลายเซ็นต์ปัจจุบันของคุณ"}
+                  {lang === "en" ? "Current Signature" : "ลายเซ็นปัจจุบันของคุณ"}
                 </label>
                 <div className="h-44 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 flex flex-col items-center justify-center overflow-hidden p-4 relative group">
                   {signaturePreview ? (
@@ -440,7 +458,7 @@ export default function ProfilePage() {
                       <button
                         onClick={handleDeleteSignature}
                         className="absolute bottom-3 right-3 w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950 hover:bg-rose-100 dark:hover:bg-rose-900 flex items-center justify-center text-rose-600 transition-colors shadow-sm"
-                        title={lang === "en" ? "Delete Signature" : "ลบลายเซ็นต์"}
+                        title={lang === "en" ? "Delete Signature" : "ลบลายเซ็น"}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -448,7 +466,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className="text-center text-slate-400 dark:text-slate-600">
                       <Fingerprint className="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-700" />
-                      <p className="text-xs font-semibold">{lang === "en" ? "No signature uploaded" : "ยังไม่ได้ตั้งค่าลายเซ็นต์"}</p>
+                      <p className="text-xs font-semibold">{lang === "en" ? "No signature uploaded" : "ยังไม่ได้ตั้งค่าลายเซ็น"}</p>
                       <p className="text-[10px] mt-1 text-slate-400 max-w-[180px]">{lang === "en" ? "Needed for generating leave forms automatically" : "จำเป็นต้องใช้สำหรับออกเอกสารใบลาโดยอัตโนมัติ"}</p>
                     </div>
                   )}
@@ -458,10 +476,10 @@ export default function ProfilePage() {
                     <button
                       onClick={handleSaveSignatureToDb}
                       disabled={savingSignature}
-                      className="flex items-center gap-2 px-5 h-9 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md shadow-purple-500/10 transition-all disabled:opacity-50"
+                      className="flex items-center gap-2 px-5 h-9 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold shadow-md shadow-primary/10 transition-all disabled:opacity-50"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      {savingSignature ? (lang === "en" ? "Saving..." : "กำลังบันทึก...") : (lang === "en" ? "Save Signature" : "ยืนยันและบันทึกลายเซ็นต์")}
+                      {savingSignature ? (lang === "en" ? "Saving..." : "กำลังบันทึก...") : (lang === "en" ? "Save Signature" : "ยืนยันและบันทึกลายเซ็น")}
                     </button>
                   </div>
                 )}
@@ -470,46 +488,25 @@ export default function ProfilePage() {
               {/* Upload/Draw Input Container */}
               <div className="space-y-4">
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  {lang === "en" ? "Upload or Draw New Signature" : "เพิ่มลายเซ็นต์ใหม่ (อัปโหลด หรือ วาดบนจอ)"}
+                  {lang === "en" ? "Upload or Draw New Signature" : "เพิ่มลายเซ็นใหม่ (อัปโหลด หรือ วาดบนจอ)"}
                 </label>
 
                 {/* Method selector tab */}
                 <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl">
                   <label
-                    onClick={() => {
-                      const drawEl = document.getElementById("sig-draw-section");
-                      const uploadEl = document.getElementById("sig-upload-section");
-                      const tabUpload = document.getElementById("tab-upload-label");
-                      const tabDraw = document.getElementById("tab-draw-label");
-                      if (drawEl) drawEl.style.display = "none";
-                      if (uploadEl) uploadEl.style.display = "block";
-                      if (tabUpload) {
-                        tabUpload.className = "flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 shadow-sm border border-slate-200/40 dark:border-slate-800/40 cursor-pointer transition-all";
-                      }
-                      if (tabDraw) {
-                        tabDraw.className = "flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer transition-all";
-                      }
-                    }}
-                    id="tab-upload-label"
-                    className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 shadow-sm border border-slate-200/40 dark:border-slate-800/40 cursor-pointer transition-all"
+                    onClick={() => setSignatureMethod("upload")}
+                    className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                      signatureMethod === "upload"
+                        ? "text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 shadow-sm border border-slate-200/40 dark:border-slate-800/40"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
                   >
                     <Paperclip className="w-3.5 h-3.5" />
                     <span>{lang === "en" ? "Upload Image" : "อัปโหลดภาพแสกน"}</span>
                   </label>
                   <label
                     onClick={() => {
-                      const drawEl = document.getElementById("sig-draw-section");
-                      const uploadEl = document.getElementById("sig-upload-section");
-                      const tabUpload = document.getElementById("tab-upload-label");
-                      const tabDraw = document.getElementById("tab-draw-label");
-                      if (drawEl) drawEl.style.display = "block";
-                      if (uploadEl) uploadEl.style.display = "none";
-                      if (tabUpload) {
-                        tabUpload.className = "flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer transition-all";
-                      }
-                      if (tabDraw) {
-                        tabDraw.className = "flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 shadow-sm border border-slate-200/40 dark:border-slate-800/40 cursor-pointer transition-all";
-                      }
+                      setSignatureMethod("draw");
                       // Wait for display change then ensure canvas width is matched to layout
                       setTimeout(() => {
                         const canvas = canvasRef.current;
@@ -524,8 +521,11 @@ export default function ProfilePage() {
                         }
                       }, 50);
                     }}
-                    id="tab-draw-label"
-                    className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer transition-all"
+                    className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                      signatureMethod === "draw"
+                        ? "text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 shadow-sm border border-slate-200/40 dark:border-slate-800/40"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     <span>{lang === "en" ? "Draw Signature" : "วาดบนหน้าจอ"}</span>
@@ -533,7 +533,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Upload Section */}
-                <div id="sig-upload-section" className="block">
+                <div className={signatureMethod === "upload" ? "block" : "hidden"}>
                   <label className="flex flex-col items-center justify-center w-full h-32 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/10 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50/30 dark:hover:bg-purple-500/5 transition-all cursor-pointer group">
                     <input
                       ref={signatureInputRef}
@@ -543,13 +543,13 @@ export default function ProfilePage() {
                       className="hidden"
                     />
                     <Paperclip className="w-7 h-7 text-slate-300 dark:text-slate-700 group-hover:text-purple-400 transition-colors mb-1.5" />
-                    <span className="text-xs text-slate-400 group-hover:text-purple-500 transition-colors">{lang === "en" ? "Click to upload signature file" : "คลิกเพื่อเลือกไฟล์รูปภาพลายเซ็นต์"}</span>
+                    <span className="text-xs text-slate-400 group-hover:text-purple-500 transition-colors">{lang === "en" ? "Click to upload signature file" : "คลิกเพื่อเลือกไฟล์รูปภาพลายเซ็น"}</span>
                     <span className="text-[10px] text-slate-300 dark:text-slate-700 mt-1">{lang === "en" ? "PNG transparent background recommended" : "แนะนำเป็นไฟล์ PNG พื้นหลังโปร่งใส"}</span>
                   </label>
                 </div>
 
                 {/* Draw Section */}
-                <div id="sig-draw-section" className="hidden">
+                <div className={signatureMethod === "draw" ? "block" : "hidden"}>
                   <div className="relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/20 overflow-hidden">
                     <canvas
                       ref={canvasRef}
@@ -586,8 +586,219 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* E-Signature PIN & Biometrics Settings Card */}
+          <div className="glass-card rounded-2xl border border-border p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] space-y-6">
+            <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white pb-4 border-b border-slate-100 dark:border-slate-850/80">
+              <Lock className="w-5 h-5 text-indigo-500" />
+              <span>{lang === "en" ? "E-Signature PIN & Biometrics" : "ระบบความปลอดภัย E-Signature PIN และชีวมาตร"}</span>
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* PIN Setup Form */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  {lang === "en" ? "Manage 6-Digit PIN" : "จัดการรหัส PIN 6 หลัก"}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {lang === "en" 
+                    ? "Set or change your E-signature PIN code to secure your authorizations." 
+                    : "กำหนดหรือเปลี่ยนรหัส PIN 6 หลักสำหรับอนุมัติและลงลายเซ็นดิจิทัล"}
+                </p>
+
+                {pinError && (
+                  <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 text-xs font-semibold border border-rose-100 dark:border-rose-950">
+                    {pinError}
+                  </div>
+                )}
+                {pinSuccess && (
+                  <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-100 dark:border-emerald-950 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span>{pinSuccess}</span>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-450 dark:text-slate-500 mb-1.5 uppercase tracking-wider">
+                      {lang === "en" ? "New PIN (6 digits)" : "รหัส PIN ใหม่ (6 หลัก)"}
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      pattern="\d{6}"
+                      inputMode="numeric"
+                      value={pinCode}
+                      onChange={(e) => {
+                        if (/^\d*$/.test(e.target.value)) setPinCode(e.target.value);
+                      }}
+                      placeholder="••••••"
+                      className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500/20 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-450 dark:text-slate-500 mb-1.5 uppercase tracking-wider">
+                      {lang === "en" ? "Confirm New PIN" : "ยืนยันรหัส PIN ใหม่"}
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      pattern="\d{6}"
+                      inputMode="numeric"
+                      value={confirmPinCode}
+                      onChange={(e) => {
+                        if (/^\d*$/.test(e.target.value)) setConfirmPinCode(e.target.value);
+                      }}
+                      placeholder="••••••"
+                      className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500/20 outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={savingPin || pinCode.length !== 6 || confirmPinCode.length !== 6}
+                    onClick={async () => {
+                      if (pinCode !== confirmPinCode) {
+                        setPinError(lang === "en" ? "PINs do not match" : "รหัส PIN ไม่ตรงกัน");
+                        return;
+                      }
+                      setSavingPin(true);
+                      setPinError("");
+                      setPinSuccess("");
+                      try {
+                        const res = await setupSignaturePin(pinCode);
+                        if (res.success) {
+                          setPinSuccess(lang === "en" ? "PIN updated successfully!" : "ตั้งค่ารหัส PIN ลายเซ็นสำเร็จ");
+                          setPinCode("");
+                          setConfirmPinCode("");
+                          await refetch();
+                        }
+                      } catch (err: any) {
+                        setPinError(err.message || "เกิดข้อผิดพลาด");
+                      } finally {
+                        setSavingPin(false);
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-md shadow-purple-500/10"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{savingPin ? (lang === "en" ? "Saving..." : "กำลังบันทึก...") : (lang === "en" ? "Set PIN Code" : "บันทึกรหัส PIN")}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Biometrics Setup Form */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Fingerprint className="w-4 h-4 text-purple-500" />
+                  <span>{lang === "en" ? "Biometric Settings" : "ลงทะเบียนลายนิ้วมือ / ใบหน้า"}</span>
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {lang === "en" 
+                    ? "Link your device FaceID or TouchID to quickly authorize documents." 
+                    : "ลงทะเบียนสแกนชีวมาตร (ลายนิ้วมือ หรือ สแกนใบหน้า) เพื่ออนุมัติเอกสารและลงลายเซ็นแทนการคีย์ PIN"}
+                </p>
+
+                {bioSuccess && (
+                  <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-100 dark:border-emerald-950 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span>{bioSuccess}</span>
+                  </div>
+                )}
+
+                <div className="flex flex-col items-center justify-center py-5 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-950/10 space-y-4">
+                  {isWebauthnEnabled ? (
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center border border-emerald-200 dark:border-emerald-900/50">
+                        <Fingerprint className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                          {lang === "en" ? "Biometrics Registered" : "ลงทะเบียนสำเร็จแล้ว"}
+                        </p>
+                        <p className="text-[10px] text-slate-450 dark:text-slate-500">
+                          {lang === "en" ? "You can sign with fingerprint/FaceID" : "คุณสามารถสแกนนิ้วเพื่อลงนามอนุมัติได้แล้ว"}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                        <Fingerprint className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                          {lang === "en" ? "Not Registered Yet" : "ยังไม่ได้เปิดใช้งาน"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={registeringBiometrics}
+                    onClick={async () => {
+                      setRegisteringBiometrics(true);
+                      setBioSuccess("");
+                      try {
+                        // Generate ECDSA P-256 Key Pair using WebCrypto
+                        const keyPair = await window.crypto.subtle.generateKey(
+                          {
+                            name: "ECDSA",
+                            namedCurve: "P-256",
+                          },
+                          true,
+                          ["sign", "verify"]
+                        );
+
+                        // Export Public Key in spki format
+                        const spki = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+                        const publicKeyPem = btoa(String.fromCharCode(...new Uint8Array(spki)));
+
+                        // Export Private Key in pkcs8 format
+                        const pkcs8 = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+                        const privateKeyPem = btoa(String.fromCharCode(...new Uint8Array(pkcs8)));
+
+                        // Generate Credential ID
+                        const credentialId = "cred_" + Math.random().toString(36).substring(2, 15);
+
+                        // Send to server
+                        const res = await registerBiometrics(publicKeyPem, credentialId);
+
+                        if (res.success) {
+                          // Save private key in localStorage specific to the user
+                          localStorage.setItem(`school_os_bio_key_${user.id}`, JSON.stringify({
+                            credentialId,
+                            privateKeyPem
+                          }));
+                          setBioSuccess(lang === "en" ? "Biometrics registered successfully!" : "ลงทะเบียนสแกนชีวมาตรสำเร็จ!");
+                          await refetch();
+                        }
+                      } catch (err) {
+                        console.error("Biometrics registration error:", err);
+                        alert(lang === "en" ? "Biometrics connection failed" : "การเชื่อมต่อชีวมาตรล้มเหลว");
+                      } finally {
+                        setRegisteringBiometrics(false);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold shadow-md shadow-primary/10 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <Fingerprint className="w-4 h-4" />
+                    <span>
+                      {registeringBiometrics 
+                        ? (lang === "en" ? "Enrolling..." : "กำลังเปิดใช้...") 
+                        : isWebauthnEnabled 
+                          ? (lang === "en" ? "Register Again" : "ลงทะเบียนใหม่อีกครั้ง") 
+                          : (lang === "en" ? "Register Biometrics" : "ลงทะเบียนข้อมูลชีวมาตร")}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Password Form */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/60 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          <div className="glass-card rounded-2xl border border-border p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white pb-4 border-b border-slate-100 dark:border-slate-800/80">
               <KeyRound className="w-5 h-5 text-purple-500" />
               {lang === "en" ? "Change Password" : "เปลี่ยนรหัสผ่าน"}

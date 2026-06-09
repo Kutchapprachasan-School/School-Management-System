@@ -55,12 +55,34 @@ async function getSession() {
   return session;
 }
 
-async function requireAdmin() {
+export async function requireAdmin() {
   const session = await getSession();
-  if (!session?.user || (session.user.role !== "ADMIN" && (session.user as any).position !== "แอดมิน")) {
-    throw new Error("สิทธิ์แอดมินเท่านั้น");
+  if (!session?.user) {
+    throw new Error("กรุณาเข้าสู่ระบบ");
   }
-  return session;
+
+  // 1. Check if user is a system admin
+  if (session.user.role === "ADMIN" || (session.user as any).position === "แอดมิน") {
+    return session;
+  }
+
+  // 2. Check if user ID is in subAdmins list
+  try {
+    const settings = await prisma.systemSettings.findUnique({
+      where: { id: "default" }
+    });
+    if (settings && settings.memoDepartments) {
+      const registry = JSON.parse(settings.memoDepartments);
+      const subAdmins = registry?.settings?.subAdmins || [];
+      if (subAdmins.includes(session.user.id)) {
+        return session;
+      }
+    }
+  } catch (err) {
+    console.error("Sub-admin authorization check failed:", err);
+  }
+
+  throw new Error("สิทธิ์แอดมินเท่านั้น");
 }
 
 // 1. Curriculum & Workload Registry Store
@@ -115,8 +137,37 @@ export async function getCurriculumRegistry() {
   }
 }
 
-export async function saveCurriculumRegistryInternal(data: { curriculums: CurriculumPlan[]; classPlanMap: Record<string, string>; workloads: Workload[]; settings?: any; lunchConfig?: any }) {
-  const serialized = JSON.stringify(data);
+export async function saveCurriculumRegistryInternal(data: { curriculums?: CurriculumPlan[]; classPlanMap?: Record<string, string>; workloads?: Workload[]; settings?: any; lunchConfig?: any }) {
+  const settingsRecord = await prisma.systemSettings.findUnique({
+    where: { id: "default" }
+  });
+
+  let existingRegistry: any = {};
+  if (settingsRecord && settingsRecord.memoDepartments) {
+    try {
+      existingRegistry = JSON.parse(settingsRecord.memoDepartments);
+    } catch (e) {}
+  }
+
+  const mergedData = {
+    curriculums: data.curriculums !== undefined ? data.curriculums : (existingRegistry.curriculums || []),
+    classPlanMap: data.classPlanMap !== undefined ? data.classPlanMap : (existingRegistry.classPlanMap || {}),
+    workloads: data.workloads !== undefined ? data.workloads : (existingRegistry.workloads || []),
+    settings: data.settings !== undefined ? data.settings : (existingRegistry.settings || {
+      deptHeads: {},
+      allowTeacherSelfAssign: true,
+      pageAccess: {},
+      subAdmins: [],
+      substitutePermissionMode: "admin_only"
+    }),
+    lunchConfig: data.lunchConfig !== undefined ? data.lunchConfig : (existingRegistry.lunchConfig || {
+      classroomLunch: {},
+      teacherLunch: {},
+      globalLunch: 5
+    })
+  };
+
+  const serialized = JSON.stringify(mergedData);
   await prisma.systemSettings.upsert({
     where: { id: "default" },
     update: { memoDepartments: serialized },
@@ -1011,6 +1062,89 @@ export async function unassignTeacherFromWorkload(workloadId: string) {
     return { success: true, message: "ยกเลิกมอบหมายครูผู้สอนสำเร็จ" };
   } catch (error: any) {
     return { success: false, error: "ยกเลิกมอบหมายล้มเหลว: " + error.message };
+  }
+}
+
+export interface CSVWorkloadInput {
+  subjectCode: string;
+  classroomName: string;
+  teacherEmail?: string;
+  hours: number;
+}
+
+export async function bulkImportWorkloads(inputs: CSVWorkloadInput[]) {
+  try {
+    await requireAdmin();
+
+    const registryRes = await getCurriculumRegistry();
+    if (!registryRes.success || !registryRes.data) {
+      return { success: false, error: registryRes.error };
+    }
+
+    const { curriculums, classPlanMap, workloads, settings, lunchConfig } = registryRes.data as any;
+
+    // Fetch DB entities for mapping
+    const dbSubjects = await prisma.subject.findMany();
+    const dbClassrooms = await prisma.classroom.findMany();
+    const dbUsers = await prisma.user.findMany();
+
+    const newWorkloads: Workload[] = [];
+    const errors: string[] = [];
+
+    inputs.forEach((input, idx) => {
+      const subject = dbSubjects.find(s => s.code.toLowerCase() === input.subjectCode.trim().toLowerCase());
+      const classroom = dbClassrooms.find(c => c.name.trim() === input.classroomName.trim());
+      let teacherId = "";
+
+      if (input.teacherEmail && input.teacherEmail.trim() !== "") {
+        const teacher = dbUsers.find(u => u.email.toLowerCase() === input.teacherEmail!.trim().toLowerCase());
+        if (teacher) {
+          teacherId = teacher.id;
+        } else {
+          errors.push(`แถวที่ ${idx + 1}: ไม่พบอีเมลคุณครู "${input.teacherEmail}" ในระบบ`);
+        }
+      }
+
+      if (!subject) {
+        errors.push(`แถวที่ ${idx + 1}: ไม่พบรหัสวิชา "${input.subjectCode}" ในระบบ`);
+        return;
+      }
+      if (!classroom) {
+        errors.push(`แถวที่ ${idx + 1}: ไม่พบห้องเรียน "${input.classroomName}" ในระบบ`);
+        return;
+      }
+
+      newWorkloads.push({
+        id: `wl-csv-${classroom.id}-${subject.id}-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+        classroomId: classroom.id,
+        subjectId: subject.id,
+        userId: teacherId,
+        roomId: "",
+        hours: Number(input.hours) || 1,
+        consReq: 1,
+        timingPref: ""
+      });
+    });
+
+    if (errors.length > 0) {
+      return { success: false, error: `พบข้อผิดพลาด:\n${errors.slice(0, 10).join("\n")}${errors.length > 10 ? `\n...และข้อผิดพลาดอื่นอีก ${errors.length - 10} รายการ` : ""}` };
+    }
+
+    const classroomsInCsv = Array.from(new Set(newWorkloads.map(w => w.classroomId)));
+    const remainingWorkloads = workloads.filter((w: Workload) => !classroomsInCsv.includes(w.classroomId));
+    const updatedWorkloads = [...remainingWorkloads, ...newWorkloads];
+
+    await saveCurriculumRegistryInternal({
+      curriculums,
+      classPlanMap,
+      workloads: updatedWorkloads,
+      settings,
+      lunchConfig
+    });
+
+    return { success: true, message: `นำเข้าภาระงานสำเร็จ ทั้งหมด ${newWorkloads.length} รายการ สำหรับห้องเรียน ${classroomsInCsv.length} ห้อง` };
+  } catch (error: any) {
+    return { success: false, error: "เกิดข้อผิดพลาดในการนำเข้าข้อมูล: " + error.message };
   }
 }
 

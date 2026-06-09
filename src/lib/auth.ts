@@ -57,6 +57,10 @@ export const auth = betterAuth({
         type: "string",
         required: false,
       },
+      signatureUrl: {
+        type: "string",
+        required: false,
+      },
     },
   },
 });
